@@ -2,6 +2,9 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define Max(a, b) (a > b ? a : b)
+#define Assert(expr) if (!(expr)) { printf("Assertion failed at line %d\n", __LINE__); *(int *) 0 = 0; }
+
 enum NodeType { NodeType_DIV, NodeType_TEXT, NodeType_COUNT };
 
 enum PropType {
@@ -12,11 +15,10 @@ enum PropType {
 
 #define FLEX_DIR_ROW 0
 #define FLEX_DIR_COLUMN 1
+
 #define JUSTIFY_CONTENT_NORMAL 0
 #define JUSTIFY_CONTENT_CENTER 1
 #define JUSTIFY_CONTENT_FLEX_END 2
-
-#define Max(a, b) (a > b ? a : b)
 
 struct Node {
   NodeType type;
@@ -43,6 +45,15 @@ Node makeDivNode() {
   return Node{
       .type = NodeType_DIV,
   };
+}
+
+void setNodeSize(Node *node, int width, int height) {
+  node->width = width;
+  node->height = height;
+}
+
+void setFlexDirection(Node *node, int value) {
+  node->props[PropType_FLEX_DIRECTION] = value;
 }
 
 void setJustifyContent(Node *node, int value) {
@@ -77,21 +88,38 @@ MEASURE_TEXT(monoSquareMeasure) {
   *y = 1;
 }
 
-int getTotalWidth(Node *nodes, int n) {
+int updatePrimaryAxisSize(int axis, Node *node) {
   int total = 0;
-  for (int i = 0; i < n; i++) {
-    total += nodes[i].width;
+
+  auto *nodes = node->children;
+  int n = node->num_children;
+
+  if (axis == FLEX_DIR_ROW) {
+    for (int i = 0; i < n; i++) {
+      total += nodes[i].width;
+    }
+
+    node->width = Max(total, node->width);
   }
+
+  if (axis == FLEX_DIR_COLUMN) {
+
+    for (int i = 0; i < n; i++) {
+      total += nodes[i].height;
+    }
+
+    node->height = Max(total, node->height);
+  }
+
   return total;
 }
 
-int calcChildrenOffset(int justifyContentValue, int childrenWidth,
-                       int parentWidth) {
-  switch (justifyContentValue) {
+int calcPrimaryOffset(int value, int childrenSize, int parentSize) {
+  switch (value) {
   case JUSTIFY_CONTENT_CENTER:
-    return (parentWidth - childrenWidth) / 2;
+    return (parentSize - childrenSize) / 2;
   case JUSTIFY_CONTENT_FLEX_END:
-    return parentWidth - childrenWidth;
+    return parentSize - childrenSize;
   case JUSTIFY_CONTENT_NORMAL:
   default:
     return 0;
@@ -113,19 +141,28 @@ void layoutNodes(Node *node, MeasureTextFn *measureText) {
       node->height = Max(node->height, child->height);
     }
 
-    // compute total width of children
-    int childrenWidth = getTotalWidth(node->children, node->num_children);
-    node->width = Max(node->width, childrenWidth);
+    auto flexDir = node->props[PropType_FLEX_DIRECTION];
+    auto justifyContent = node->props[PropType_JUSTIFY_CONTENT];
+
+    // compute total size of children
+    int childrenPrimarySize = updatePrimaryAxisSize(flexDir, node);
 
     // update final x position of children
-    int xPos = calcChildrenOffset(node->props[PropType_JUSTIFY_CONTENT],
-                                  childrenWidth, node->width);
+    int primaryOffset = calcPrimaryOffset(justifyContent, childrenPrimarySize, flexDir == FLEX_DIR_ROW ? node->width : node->height);
 
+    // TODO: y and height
+    int xPos = primaryOffset;
     for (int i = 0; i < node->num_children; i++) {
       Node *child = &node->children[i];
-      child->x = xPos;
-      xPos += child->width;
+      if (flexDir == FLEX_DIR_ROW) {
+        child->x = xPos;
+        xPos += child->width;
+      } else {
+        child->y = xPos;
+        xPos += child->height;
+      }
     }
+
     return;
   }
 }
@@ -133,6 +170,7 @@ void layoutNodes(Node *node, MeasureTextFn *measureText) {
 void asciiRenderNode(Node *node, char *output, int width, int height) {
   // we have the node's position
   int index = node->y * width + node->x;
+  Assert(index < width * height);
 
   if (node->type == NodeType_TEXT) {
     memcpy(&output[index], node->text, strlen(node->text));
@@ -177,7 +215,9 @@ int main() {
   Node div = makeDivNode();
   div.height = 12;
   div.width = 32;
+  setFlexDirection(&div, FLEX_DIR_COLUMN);
   setJustifyContent(&div, JUSTIFY_CONTENT_CENTER);
+
   Node children[2] = {makeTextNode("Hello "), makeTextNode("world!")};
   div.children = children;
   div.num_children = 2;

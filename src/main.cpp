@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 enum NodeType { NodeType_DIV, NodeType_TEXT, NodeType_COUNT };
@@ -17,11 +18,6 @@ struct Prop {
   int value;
 };
 
-struct Vec2 {
-  int x;
-  int y;
-};
-
 #define Max(a, b) (a > b ? a : b)
 
 struct Node {
@@ -34,25 +30,20 @@ struct Node {
   Node *parent;
   char *text;
 
-  Vec2 position;
-  Vec2 size;
+  int x, y;
+  int width, height;
 };
 
 Node makeTextNode(char *text) {
   return Node{
       .type = NodeType_TEXT,
       .text = text,
-      .num_children = 0,
-      .size = Vec2{0, 0},
-      .position = Vec2{0, 0},
   };
 }
 
 Node makeDivNode() {
   return Node{
       .type = NodeType_DIV,
-      .size = Vec2{0, 0},
-      .position = Vec2{0, 0},
   };
 }
 
@@ -62,11 +53,11 @@ void printNode(Node *node, int indent = 0) {
   }
 
   if (node->type == NodeType_TEXT) {
-    printf("TextNode: %s - %d %d %d %d", node->text, node->position.x,
-           node->position.y, node->size.x, node->size.y);
+    printf("TextNode: %s - %d %d %d %d", node->text, node->x,
+           node->y, node->width, node->height);
   } else {
-    printf("DivNode: %d %d %d %d\n", node->position.x, node->position.y,
-           node->size.x, node->size.y);
+    printf("DivNode: %d %d %d %d\n", node->x, node->y,
+           node->width, node->height);
 
     for (int i = 0; i < node->num_children; i++) {
       printNode(&node->children[i], indent + 2);
@@ -85,28 +76,63 @@ MEASURE_TEXT(monoSquareMeasure) {
 }
 
 void layoutNodes(Node *node, MeasureTextFn *measureText) {
-
   if (node->type == NodeType_TEXT) {
-    measureText(0, node->text, &node->size.x, &node->size.y);
+    measureText(0, node->text, &node->width, &node->height);
   } else if (node->type == NodeType_DIV) {
     for (int i = 0; i < node->num_children; i++) {
       Node *child = &node->children[i];
       layoutNodes(child, measureText);
-      node->size.x += child->size.x;
-      node->size.y = Max(node->size.y, child->size.y);
+      node->width += child->width;
+      node->height = Max(node->height, child->height);
+    }
+
+    int xPos = 0;
+    for (int i = 0; i < node->num_children; i++) {
+      Node *child = &node->children[i];
+      child->x = xPos;
+      xPos += child->width;
     }
   }
 }
 
+void asciiRenderNode(Node *node, char *output, int width, int height) {
+  // we have the node's position
+  int index = node->y * width + node->x;
+
+  if (node->type == NodeType_TEXT) {
+    strcpy(&output[index], node->text);
+  } else {
+    for (int i = 0; i < node->num_children; i++) {
+      Node *child = &node->children[i];
+      asciiRenderNode(child, output, width, height);
+    }
+  }
+}
+
+void asciiRender(Node *node) {
+  int buf_len = node->width * node->height + 1;
+  char *buffer = (char *)malloc(sizeof(char) * (buf_len));
+  buffer[buf_len] = '\0';
+
+  asciiRenderNode(node, buffer, node->width, node->height);
+
+  printf("%s", buffer);
+  free(buffer);
+}
+
 int main() {
   Node div = makeDivNode();
-  Node children[2] = {makeTextNode("Hello"), makeTextNode("world!")};
+  Node children[2] = {makeTextNode("Hello "), makeTextNode("world!")};
   div.children = children;
   div.num_children = 2;
 
   layoutNodes(&div, monoSquareMeasure);
 
   printNode(&div);
+
+  printf("\n");
+
+  asciiRender(&div);
 
   return 0;
 }
@@ -119,3 +145,5 @@ int main() {
 // They can be provided or computed
 // We want to calculate the pixel positions (upper left offset) and height/width
 // Padding and margin
+
+#undef ForEachChild

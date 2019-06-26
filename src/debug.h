@@ -39,17 +39,31 @@ void printNode(Node *node, PrintFunc *printf, int indent = 0) {
 }
 
 PILATES_MEASURE_TEXT(asciiMeasureText) {
-  *width = strlen(text);
+  *width = n ? n : strlen(text);
   *height = 1;
 }
 
 void asciiRenderNode(Node *node, char *output, int width, int height) {
   // we have the node's position
-  int index = node->y * width + node->x;
-  Assert(index < width * height);
 
   if (node->type == TEXT) {
-    memcpy(&output[index], node->text, strlen(node->text));
+    int textLen = strlen(node->text);
+
+    for (int i = 0; i < node->height; i++) {
+      int index = (i + node->y) * width + node->x;
+      int textOffset = node->width * i;
+
+      // keep text within node bounds and textLen
+      int nChars = Min(Min(width, node->width), textLen - textOffset);
+
+      // don't let text overflow buffer
+      nChars = Min(nChars, width * height - index);
+
+      if (nChars > 0) {
+        memcpy(&output[index], &node->text[textOffset], nChars);
+      }
+    }
+
   } else {
     ForEachChild(node, { asciiRenderNode(child, output, width, height); });
   }

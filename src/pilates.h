@@ -9,6 +9,9 @@
 // We want to calculate the pixel positions (upper left offset) and height/width
 // Padding and margin
 
+#include <stdio.h>
+#include <string.h>
+
 // Built-in Macros
 #define Max(a, b) (a > b ? a : b)
 #define Min(a, b) (a < b ? a : b)
@@ -25,7 +28,7 @@
 #define PILATES_ALIGN_END 2
 
 #define PILATES_MEASURE_TEXT(Name)                                             \
-  void Name(int fontId, char *text, float *width, float *height)
+  void Name(int fontId, char *text, int n, float *width, float *height)
 typedef PILATES_MEASURE_TEXT(MeasureTextFunc);
 
 enum NodeType { DIV, TEXT, NodeType_COUNT };
@@ -73,6 +76,7 @@ createPropSetter(setJustifyContent, JUSTIFY_CONTENT);
 #undef createPropSetter
 
 void updateNodeSize(int axis, Node *node, float &primaryAxisSize) {
+  // primaryAxisSize is the total size of the children
   primaryAxisSize = 0;
   float secondaryAxisSize = 0;
 
@@ -82,8 +86,13 @@ void updateNodeSize(int axis, Node *node, float &primaryAxisSize) {
       secondaryAxisSize = Max(secondaryAxisSize, child->height);
     });
 
-    node->width = Max(primaryAxisSize, node->width);
-    node->height = Max(secondaryAxisSize, node->height);
+    if (node->width == 0) {
+      node->width = primaryAxisSize;
+    }
+    if (node->height == 0) {
+
+      node->height = Max(secondaryAxisSize, node->height);
+    }
   }
 
   if (axis == PILATES_COLUMN) {
@@ -109,9 +118,56 @@ int calcAxisOffset(int value, int childrenSize, int parentSize) {
   }
 }
 
+int strpos(char *str, char search) {
+  char *found = strchr(str, search);
+
+  if (str) {
+    return found - str;
+  }
+
+  return -1;
+}
+
+// Currently this only supports word-wrapping mode
+int computeTextLineHeight(int fontId, MeasureTextFunc *measureText, char *text,
+                          float maxWidth) {
+  int nLines = 0;
+  float lineWidth = 0;
+
+  int n = strlen(text);
+  for (int i = 0; i < n; i++) {
+    int nextSpace = strpos(&text[i], ' ');
+
+    if (nextSpace < 0)
+      nextSpace = n;
+
+    float width, height;
+    measureText(fontId, &text[i], nextSpace - i, &width, &height);
+
+    lineWidth += width;
+    if (lineWidth > maxWidth) {
+      nLines++;
+      lineWidth = width;
+    }
+
+    i = nextSpace + 1;
+  }
+
+  return nLines;
+}
+
+// TODOs
+// The height of the parent needs to grow based on the height of the wrapped
+// children if no height is provided
+// TODO: don't try to write outside of buffer range
+// We need to wrap text
+// The height is wrong
+
 void layoutNodes(Node *node, MeasureTextFunc *measureText) {
   if (node->type == TEXT) {
-    measureText(0, node->text, &node->width, &node->height);
+    // given a max-width and a measuretext func and the text to measure,
+    // and the font id, give us the height
+    measureText(0, node->text, 0, &node->width, &node->height);
     return;
   }
 
@@ -123,20 +179,26 @@ void layoutNodes(Node *node, MeasureTextFunc *measureText) {
       node->height = Max(node->height, child->height);
     }
 
-    auto flexDir = node->props[FLEX_DIRECTION];
-    auto justifyContent = node->props[JUSTIFY_CONTENT];
-    auto alignItems = node->props[ALIGN_ITEMS];
+    int flexDir = node->props[FLEX_DIRECTION];
+    int justifyContent = node->props[JUSTIFY_CONTENT];
+    int alignItems = node->props[ALIGN_ITEMS];
+
+    float parentPrimarySize =
+        flexDir == PILATES_ROW ? node->width : node->height;
+    float parentSecondarySize =
+        flexDir == PILATES_ROW ? node->height : node->width;
 
     // compute total size of children
     float childrenPrimarySize;
     updateNodeSize(flexDir, node, childrenPrimarySize);
 
-    // update final x position of children
+    childrenPrimarySize = Min(parentPrimarySize, childrenPrimarySize);
+
+    // if childrenPrimarySize is larger than node.width, we need to wrap
+
+    // start of primary axis children box
     float primaryOffset =
-        calcAxisOffset(justifyContent, childrenPrimarySize,
-                       flexDir == PILATES_ROW ? node->width : node->height);
-    float secondaryParentSize =
-        flexDir == PILATES_ROW ? node->height : node->width;
+        calcAxisOffset(justifyContent, childrenPrimarySize, parentPrimarySize);
 
     float pPos = primaryOffset;
     for (int i = 0; i < node->num_children; i++) {
@@ -145,12 +207,12 @@ void layoutNodes(Node *node, MeasureTextFunc *measureText) {
         child->x = pPos;
         pPos += child->width;
         child->y =
-            calcAxisOffset(alignItems, child->height, secondaryParentSize);
+            calcAxisOffset(alignItems, child->height, parentSecondarySize);
       } else {
         child->y = pPos;
         pPos += child->height;
         child->x =
-            calcAxisOffset(alignItems, child->width, secondaryParentSize);
+            calcAxisOffset(alignItems, child->width, parentSecondarySize);
       }
     }
 

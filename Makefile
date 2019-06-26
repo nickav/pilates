@@ -1,4 +1,4 @@
 macos:
 	mkdir -p bin
-	clang++ src/main.cpp -o bin/main -Wno-writable-strings
+	g++ -std=c++11 src/main.cpp -o bin/main -Wno-writable-strings
 	./bin/main

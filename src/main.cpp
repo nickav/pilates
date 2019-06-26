@@ -2,7 +2,19 @@
 #include <stdlib.h>
 #include <string.h>
 
+// We need a way to measure text
+// Width: sum of the widths of all the characters
+// Height: line height * # of newlines (post-wrapped)
+
+// Every node has a width and height
+// They can be provided or computed
+// We want to calculate the pixel positions (upper left offset) and height/width
+// Padding and margin
+
+// Built-in Macros
 #define Max(a, b) (a > b ? a : b)
+#define Min(a, b) (a < b ? a : b)
+
 #define Assert(expr)                                                           \
   if (!(expr)) {                                                               \
     printf("Assert failed in function '%s' on line: %d\n", __FUNCTION__,       \
@@ -10,22 +22,20 @@
     *(volatile int *)0 = 0;                                                    \
   }
 
-enum NodeType { NodeType_DIV, NodeType_TEXT, NodeType_COUNT };
+// Library Macros
 
-enum PropType {
-  PropType_FLEX_DIRECTION,
-  PropType_JUSTIFY_CONTENT,
-  PropType_ALIGN_ITEMS,
-  PropType_COUNT
-};
-
-#define FLEX_DIR_ROW 0
-#define FLEX_DIR_COLUMN 1
+// flex-direction
+#define PILATES_ROW 0
+#define PILATES_COLUMN 1
 
 // both for justify-content and align-items
-#define ALIGN_NORMAL 0
-#define ALIGN_CENTER 1
-#define ALIGN_END 2
+#define PILATES_ALIGN_NORMAL 0
+#define PILATES_ALIGN_CENTER 1
+#define PILATES_ALIGN_END 2
+
+enum NodeType { DIV, TEXT, NodeType_COUNT };
+
+enum PropType { FLEX_DIRECTION, JUSTIFY_CONTENT, ALIGN_ITEMS, PropType_COUNT };
 
 struct Node {
   NodeType type;
@@ -47,31 +57,9 @@ struct Node {
     Body                                                                       \
   }
 
-Node makeTextNode(char *text) {
-  return Node{
-      .type = NodeType_TEXT,
-      .text = text,
-      .parent = NULL,
-      .num_children = 0,
-      .x = 0,
-      .y = 0,
-      .width = 0,
-      .height = 0,
-  };
-}
+Node textNode(char *text) { return Node{.type = TEXT, .text = text}; }
 
-Node makeDivNode() {
-  return Node{
-      .type = NodeType_DIV,
-      .parent = NULL,
-      .text = NULL,
-      .num_children = 0,
-      .x = 0,
-      .y = 0,
-      .width = 0,
-      .height = 0,
-  };
-}
+Node divNode() { return Node{.type = DIV}; }
 
 void setNodeSize(Node *node, int width, int height) {
   node->width = width;
@@ -81,9 +69,9 @@ void setNodeSize(Node *node, int width, int height) {
 #define createPropSetter(PropName, PropType)                                   \
   void PropName(Node *node, int value) { node->props[PropType] = value; }
 
-createPropSetter(setAlignItems, PropType_ALIGN_ITEMS);
-createPropSetter(setFlexDirection, PropType_FLEX_DIRECTION);
-createPropSetter(setJustifyContent, PropType_JUSTIFY_CONTENT);
+createPropSetter(setAlignItems, ALIGN_ITEMS);
+createPropSetter(setFlexDirection, FLEX_DIRECTION);
+createPropSetter(setJustifyContent, JUSTIFY_CONTENT);
 
 #undef createPropSetter
 
@@ -92,7 +80,7 @@ void printNode(Node *node, int indent = 0) {
     printf(" ");
   }
 
-  if (node->type == NodeType_TEXT) {
+  if (node->type == TEXT) {
     printf("TextNode: %s - %f %f %f %f", node->text, node->x, node->y,
            node->width, node->height);
   } else {
@@ -108,19 +96,19 @@ void printNode(Node *node, int indent = 0) {
 }
 
 #define MEASURE_TEXT(Name)                                                     \
-  void Name(int font_id, char *text, float *x, float *y)
+  void Name(int font_id, char *text, float *width, float *height)
 typedef MEASURE_TEXT(MeasureTextFn);
 
 MEASURE_TEXT(monoSquareMeasure) {
-  *x = strlen(text);
-  *y = 1;
+  *width = strlen(text);
+  *height = 1;
 }
 
 void updateNodeSize(int axis, Node *node, float &primaryAxisSize) {
   primaryAxisSize = 0;
   float secondaryAxisSize = 0;
 
-  if (axis == FLEX_DIR_ROW) {
+  if (axis == PILATES_ROW) {
     ForEachChild(node, {
       primaryAxisSize += child->width;
       secondaryAxisSize = Max(secondaryAxisSize, child->height);
@@ -130,7 +118,7 @@ void updateNodeSize(int axis, Node *node, float &primaryAxisSize) {
     node->height = Max(secondaryAxisSize, node->height);
   }
 
-  if (axis == FLEX_DIR_COLUMN) {
+  if (axis == PILATES_COLUMN) {
     ForEachChild(node, {
       primaryAxisSize += child->height;
       secondaryAxisSize = Max(secondaryAxisSize, child->width);
@@ -143,11 +131,11 @@ void updateNodeSize(int axis, Node *node, float &primaryAxisSize) {
 
 int calcAxisOffset(int value, int childrenSize, int parentSize) {
   switch (value) {
-  case ALIGN_CENTER:
+  case PILATES_ALIGN_CENTER:
     return (parentSize - childrenSize) / 2;
-  case ALIGN_END:
+  case PILATES_ALIGN_END:
     return parentSize - childrenSize;
-  case ALIGN_NORMAL:
+  case PILATES_ALIGN_NORMAL:
   default:
     return 0;
   }
@@ -155,12 +143,12 @@ int calcAxisOffset(int value, int childrenSize, int parentSize) {
 
 void layoutNodes(Node *node, MeasureTextFn *measureText) {
 
-  if (node->type == NodeType_TEXT) {
+  if (node->type == TEXT) {
     measureText(0, node->text, &node->width, &node->height);
     return;
   }
 
-  if (node->type == NodeType_DIV) {
+  if (node->type == DIV) {
     // compute dimensions on each node
     for (int i = 0; i < node->num_children; i++) {
       Node *child = &node->children[i];
@@ -168,9 +156,9 @@ void layoutNodes(Node *node, MeasureTextFn *measureText) {
       node->height = Max(node->height, child->height);
     }
 
-    auto flexDir = node->props[PropType_FLEX_DIRECTION];
-    auto justifyContent = node->props[PropType_JUSTIFY_CONTENT];
-    auto alignItems = node->props[PropType_ALIGN_ITEMS];
+    auto flexDir = node->props[FLEX_DIRECTION];
+    auto justifyContent = node->props[JUSTIFY_CONTENT];
+    auto alignItems = node->props[ALIGN_ITEMS];
 
     // compute total size of children
     float childrenPrimarySize;
@@ -179,21 +167,24 @@ void layoutNodes(Node *node, MeasureTextFn *measureText) {
     // update final x position of children
     float primaryOffset =
         calcAxisOffset(justifyContent, childrenPrimarySize,
-                       flexDir == FLEX_DIR_ROW ? node->width : node->height);
-    float secondaryParentSize = flexDir == FLEX_DIR_ROW ? node->height : node->width;
+                       flexDir == PILATES_ROW ? node->width : node->height);
+    float secondaryParentSize =
+        flexDir == PILATES_ROW ? node->height : node->width;
 
     // TODO: y and height
     float pPos = primaryOffset;
     for (int i = 0; i < node->num_children; i++) {
       Node *child = &node->children[i];
-      if (flexDir == FLEX_DIR_ROW) {
+      if (flexDir == PILATES_ROW) {
         child->x = pPos;
         pPos += child->width;
-        child->y = calcAxisOffset(alignItems, child->height, secondaryParentSize);
+        child->y =
+            calcAxisOffset(alignItems, child->height, secondaryParentSize);
       } else {
         child->y = pPos;
         pPos += child->height;
-        child->x = calcAxisOffset(alignItems, child->width, secondaryParentSize);
+        child->x =
+            calcAxisOffset(alignItems, child->width, secondaryParentSize);
       }
     }
 
@@ -206,7 +197,7 @@ void asciiRenderNode(Node *node, char *output, int width, int height) {
   int index = node->y * width + node->x;
   Assert(index < width * height);
 
-  if (node->type == NodeType_TEXT) {
+  if (node->type == TEXT) {
     memcpy(&output[index], node->text, strlen(node->text));
   } else {
     ForEachChild(node, { asciiRenderNode(child, output, width, height); });
@@ -243,15 +234,17 @@ void asciiRender(Node *node) {
   free(buffer);
 }
 
+#undef ForEachChild
+
 int main() {
-  Node div = makeDivNode();
+  Node div = divNode();
   div.height = 13;
   div.width = 32;
-  setFlexDirection(&div, FLEX_DIR_ROW);
-  setJustifyContent(&div, ALIGN_CENTER);
-  setAlignItems(&div, ALIGN_CENTER);
+  setFlexDirection(&div, PILATES_ROW);
+  setJustifyContent(&div, PILATES_ALIGN_CENTER);
+  setAlignItems(&div, PILATES_ALIGN_CENTER);
 
-  Node children[2] = {makeTextNode("Hi"), makeTextNode("world!")};
+  Node children[2] = {textNode("Hi"), textNode("world!")};
   div.children = children;
   div.num_children = 2;
 
@@ -265,14 +258,3 @@ int main() {
 
   return 0;
 }
-
-// We need a way to measure text
-// Width: sum of the widths of all the characters
-// Height: line height * # of newlines (post-wrapped)
-
-// Every node has a width and height
-// They can be provided or computed
-// We want to calculate the pixel positions (upper left offset) and height/width
-// Padding and margin
-
-#undef ForEachChild

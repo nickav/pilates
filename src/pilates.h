@@ -26,6 +26,9 @@
 #define PILATES_ALIGN_NORMAL 0
 #define PILATES_ALIGN_CENTER 1
 #define PILATES_ALIGN_END 2
+#define PILATES_SPACE_BETWEEN 3
+#define PILATES_SPACE_AROUND 4
+#define PILATES_SPACE_EVENLY 4
 
 #define PILATES_MEASURE_TEXT(Name)                                             \
   void Name(int fontId, char *text, int n, float *width, float *height)
@@ -38,6 +41,7 @@ enum PropType { FLEX_DIRECTION, JUSTIFY_CONTENT, ALIGN_ITEMS, PropType_COUNT };
 struct Node {
   NodeType type;
   int props[PropType_COUNT];
+  int id;
   Node *parent;
 
   float x, y;
@@ -90,7 +94,6 @@ void updateNodeSize(int axis, Node *node, float &primaryAxisSize) {
       node->width = primaryAxisSize;
     }
     if (node->height == 0) {
-
       node->height = Max(secondaryAxisSize, node->height);
     }
   }
@@ -101,8 +104,12 @@ void updateNodeSize(int axis, Node *node, float &primaryAxisSize) {
       secondaryAxisSize = Max(secondaryAxisSize, child->width);
     });
 
-    node->height = Max(primaryAxisSize, node->height);
-    node->width = Max(secondaryAxisSize, node->width);
+    if (node->height == 0) {
+      node->height = primaryAxisSize;
+    }
+    if (node->width == 0) {
+      node->width = Max(secondaryAxisSize, node->width);
+    }
   }
 }
 
@@ -118,11 +125,11 @@ int calcAxisOffset(int value, int childrenSize, int parentSize) {
   }
 }
 
-int strpos(char *str, char search) {
-  char *found = strchr(str, search);
-
-  if (str) {
-    return found - str;
+int strpos(char *str, char search, int offset) {
+  for (int i = offset; i < strlen(str); i++) {
+    if (str[i] == search) {
+      return i;
+    }
   }
 
   return -1;
@@ -131,29 +138,29 @@ int strpos(char *str, char search) {
 // Currently this only supports word-wrapping mode
 int computeTextLineHeight(int fontId, MeasureTextFunc *measureText, char *text,
                           float maxWidth) {
-  int nLines = 0;
+  int lines = 1;
   float lineWidth = 0;
 
   int n = strlen(text);
   for (int i = 0; i < n; i++) {
-    int nextSpace = strpos(&text[i], ' ');
+    int nextSpace = strpos(text, ' ', i);
 
     if (nextSpace < 0)
-      nextSpace = n;
+      nextSpace = n - 1;
 
     float width, height;
-    measureText(fontId, &text[i], nextSpace - i, &width, &height);
-
+    measureText(fontId, &text[i], nextSpace - i + 1, &width, &height);
     lineWidth += width;
+
     if (lineWidth > maxWidth) {
-      nLines++;
+      lines++;
       lineWidth = width;
     }
 
-    i = nextSpace + 1;
+    i = nextSpace;
   }
 
-  return nLines;
+  return lines;
 }
 
 // TODOs
@@ -173,11 +180,10 @@ void layoutNodes(Node *node, MeasureTextFunc *measureText) {
 
   if (node->type == DIV) {
     // compute dimensions on each node
-    for (int i = 0; i < node->num_children; i++) {
-      Node *child = &node->children[i];
+    ForEachChild(node, {
       layoutNodes(child, measureText);
       node->height = Max(node->height, child->height);
-    }
+    });
 
     int flexDir = node->props[FLEX_DIRECTION];
     int justifyContent = node->props[JUSTIFY_CONTENT];
@@ -192,9 +198,46 @@ void layoutNodes(Node *node, MeasureTextFunc *measureText) {
     float childrenPrimarySize;
     updateNodeSize(flexDir, node, childrenPrimarySize);
 
-    childrenPrimarySize = Min(parentPrimarySize, childrenPrimarySize);
-
     // if childrenPrimarySize is larger than node.width, we need to wrap
+    if (parentPrimarySize < childrenPrimarySize) {
+      childrenPrimarySize = parentPrimarySize;
+
+      ForEachChild(node, {
+        if (flexDir == PILATES_ROW) {
+          child->width = childrenPrimarySize / node->num_children;
+          child->height =
+              computeTextLineHeight(0, measureText, child->text, child->width);
+        } else {
+          child->height = childrenPrimarySize / node->num_children;
+          child->width =
+              computeTextLineHeight(0, measureText, child->text, child->height);
+        }
+      });
+    }
+
+    // TODO: fix for FLEX_ROW
+    /*
+    childrenPrimarySize = 0.f;
+    ForEachChild(node, {
+      if (flexDir == PILATES_ROW) {
+        if (child->height > node->height) {
+          child->height = node->height;
+          child->width =
+              computeTextLineHeight(0, measureText, child->text, child->height);
+        }
+
+        childrenPrimarySize += child->width;
+      } else {
+        if (child->width > node->width) {
+          child->width = node->width;
+          child->height =
+              computeTextLineHeight(0, measureText, child->text, child->width);
+        }
+
+        childrenPrimarySize += child->height;
+      }
+    });
+    */
 
     // start of primary axis children box
     float primaryOffset =

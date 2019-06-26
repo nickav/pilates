@@ -43,6 +43,7 @@ PILATES_MEASURE_TEXT(asciiMeasureText) {
   *height = 1;
 }
 
+// TODO: bounds check on all parts of the node (x, y, width, height)
 void asciiRenderNode(Node *node, char *output, int width, int height) {
   // we have the node's position
 

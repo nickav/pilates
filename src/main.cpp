@@ -3,22 +3,29 @@
 #include <string.h>
 
 #define Max(a, b) (a > b ? a : b)
-#define Assert(expr) if (!(expr)) { printf("Assertion failed at line %d\n", __LINE__); *(int *) 0 = 0; }
+#define Assert(expr)                                                           \
+  if (!(expr)) {                                                               \
+    printf("Assert failed in function '%s' on line: %d\n", __FUNCTION__,       \
+           __LINE__);                                                          \
+    *(volatile int *)0 = 0;                                                    \
+  }
 
 enum NodeType { NodeType_DIV, NodeType_TEXT, NodeType_COUNT };
 
 enum PropType {
   PropType_FLEX_DIRECTION,
   PropType_JUSTIFY_CONTENT,
+  PropType_ALIGN_ITEMS,
   PropType_COUNT
 };
 
 #define FLEX_DIR_ROW 0
 #define FLEX_DIR_COLUMN 1
 
-#define JUSTIFY_CONTENT_NORMAL 0
-#define JUSTIFY_CONTENT_CENTER 1
-#define JUSTIFY_CONTENT_FLEX_END 2
+// both for justify-content and align-items
+#define ALIGN_NORMAL 0
+#define ALIGN_CENTER 1
+#define ALIGN_END 2
 
 struct Node {
   NodeType type;
@@ -30,20 +37,39 @@ struct Node {
   Node *parent;
   char *text;
 
-  int x, y;
-  int width, height;
+  float x, y;
+  float width, height;
 };
+
+#define ForEachChild(Parent, Body)                                             \
+  for (int i = 0; i < Parent->num_children; i++) {                             \
+    auto *child = &Parent->children[i];                                        \
+    Body                                                                       \
+  }
 
 Node makeTextNode(char *text) {
   return Node{
       .type = NodeType_TEXT,
       .text = text,
+      .parent = NULL,
+      .num_children = 0,
+      .x = 0,
+      .y = 0,
+      .width = 0,
+      .height = 0,
   };
 }
 
 Node makeDivNode() {
   return Node{
       .type = NodeType_DIV,
+      .parent = NULL,
+      .text = NULL,
+      .num_children = 0,
+      .x = 0,
+      .y = 0,
+      .width = 0,
+      .height = 0,
   };
 }
 
@@ -52,13 +78,14 @@ void setNodeSize(Node *node, int width, int height) {
   node->height = height;
 }
 
-void setFlexDirection(Node *node, int value) {
-  node->props[PropType_FLEX_DIRECTION] = value;
-}
+#define createPropSetter(PropName, PropType)                                   \
+  void PropName(Node *node, int value) { node->props[PropType] = value; }
 
-void setJustifyContent(Node *node, int value) {
-  node->props[PropType_JUSTIFY_CONTENT] = value;
-}
+createPropSetter(setAlignItems, PropType_ALIGN_ITEMS);
+createPropSetter(setFlexDirection, PropType_FLEX_DIRECTION);
+createPropSetter(setJustifyContent, PropType_JUSTIFY_CONTENT);
+
+#undef createPropSetter
 
 void printNode(Node *node, int indent = 0) {
   for (int i = 0; i < indent; i++) {
@@ -66,10 +93,10 @@ void printNode(Node *node, int indent = 0) {
   }
 
   if (node->type == NodeType_TEXT) {
-    printf("TextNode: %s - %d %d %d %d", node->text, node->x, node->y,
+    printf("TextNode: %s - %f %f %f %f", node->text, node->x, node->y,
            node->width, node->height);
   } else {
-    printf("DivNode: %d %d %d %d\n", node->x, node->y, node->width,
+    printf("DivNode: %f %f %f %f\n", node->x, node->y, node->width,
            node->height);
 
     for (int i = 0; i < node->num_children; i++) {
@@ -80,7 +107,8 @@ void printNode(Node *node, int indent = 0) {
   printf("\n");
 }
 
-#define MEASURE_TEXT(Name) void Name(int font_id, char *text, int *x, int *y)
+#define MEASURE_TEXT(Name)                                                     \
+  void Name(int font_id, char *text, float *x, float *y)
 typedef MEASURE_TEXT(MeasureTextFn);
 
 MEASURE_TEXT(monoSquareMeasure) {
@@ -88,39 +116,38 @@ MEASURE_TEXT(monoSquareMeasure) {
   *y = 1;
 }
 
-int updatePrimaryAxisSize(int axis, Node *node) {
-  int total = 0;
-
-  auto *nodes = node->children;
-  int n = node->num_children;
+void updateNodeSize(int axis, Node *node, float &primaryAxisSize) {
+  primaryAxisSize = 0;
+  float secondaryAxisSize = 0;
 
   if (axis == FLEX_DIR_ROW) {
-    for (int i = 0; i < n; i++) {
-      total += nodes[i].width;
-    }
+    ForEachChild(node, {
+      primaryAxisSize += child->width;
+      secondaryAxisSize = Max(secondaryAxisSize, child->height);
+    });
 
-    node->width = Max(total, node->width);
+    node->width = Max(primaryAxisSize, node->width);
+    node->height = Max(secondaryAxisSize, node->height);
   }
 
   if (axis == FLEX_DIR_COLUMN) {
+    ForEachChild(node, {
+      primaryAxisSize += child->height;
+      secondaryAxisSize = Max(secondaryAxisSize, child->width);
+    });
 
-    for (int i = 0; i < n; i++) {
-      total += nodes[i].height;
-    }
-
-    node->height = Max(total, node->height);
+    node->height = Max(primaryAxisSize, node->height);
+    node->width = Max(secondaryAxisSize, node->width);
   }
-
-  return total;
 }
 
-int calcPrimaryOffset(int value, int childrenSize, int parentSize) {
+int calcAxisOffset(int value, int childrenSize, int parentSize) {
   switch (value) {
-  case JUSTIFY_CONTENT_CENTER:
+  case ALIGN_CENTER:
     return (parentSize - childrenSize) / 2;
-  case JUSTIFY_CONTENT_FLEX_END:
+  case ALIGN_END:
     return parentSize - childrenSize;
-  case JUSTIFY_CONTENT_NORMAL:
+  case ALIGN_NORMAL:
   default:
     return 0;
   }
@@ -143,23 +170,30 @@ void layoutNodes(Node *node, MeasureTextFn *measureText) {
 
     auto flexDir = node->props[PropType_FLEX_DIRECTION];
     auto justifyContent = node->props[PropType_JUSTIFY_CONTENT];
+    auto alignItems = node->props[PropType_ALIGN_ITEMS];
 
     // compute total size of children
-    int childrenPrimarySize = updatePrimaryAxisSize(flexDir, node);
+    float childrenPrimarySize;
+    updateNodeSize(flexDir, node, childrenPrimarySize);
 
     // update final x position of children
-    int primaryOffset = calcPrimaryOffset(justifyContent, childrenPrimarySize, flexDir == FLEX_DIR_ROW ? node->width : node->height);
+    float primaryOffset =
+        calcAxisOffset(justifyContent, childrenPrimarySize,
+                       flexDir == FLEX_DIR_ROW ? node->width : node->height);
+    float secondaryParentSize = flexDir == FLEX_DIR_ROW ? node->height : node->width;
 
     // TODO: y and height
-    int xPos = primaryOffset;
+    float pPos = primaryOffset;
     for (int i = 0; i < node->num_children; i++) {
       Node *child = &node->children[i];
       if (flexDir == FLEX_DIR_ROW) {
-        child->x = xPos;
-        xPos += child->width;
+        child->x = pPos;
+        pPos += child->width;
+        child->y = calcAxisOffset(alignItems, child->height, secondaryParentSize);
       } else {
-        child->y = xPos;
-        xPos += child->height;
+        child->y = pPos;
+        pPos += child->height;
+        child->x = calcAxisOffset(alignItems, child->width, secondaryParentSize);
       }
     }
 
@@ -175,17 +209,15 @@ void asciiRenderNode(Node *node, char *output, int width, int height) {
   if (node->type == NodeType_TEXT) {
     memcpy(&output[index], node->text, strlen(node->text));
   } else {
-    for (int i = 0; i < node->num_children; i++) {
-      Node *child = &node->children[i];
-      asciiRenderNode(child, output, width, height);
-    }
+    ForEachChild(node, { asciiRenderNode(child, output, width, height); });
   }
 }
 
 void asciiRender(Node *node) {
-  int width = node->width;
-  int height = node->height;
+  int width = (int)node->width;
+  int height = (int)node->height;
 
+  // alloc temporary storage
   int buf_len = width * height + 1;
   char *buffer = (char *)malloc(sizeof(char) * (buf_len));
   memset(buffer, ' ', buf_len);
@@ -195,7 +227,7 @@ void asciiRender(Node *node) {
 
   printf("width: %d\nheight: %d\n", width, height);
 
-  // print
+  // print the grid
   for (int i = 0; i < width; i++)
     printf("-");
   printf("\n");
@@ -213,12 +245,13 @@ void asciiRender(Node *node) {
 
 int main() {
   Node div = makeDivNode();
-  div.height = 12;
+  div.height = 13;
   div.width = 32;
-  setFlexDirection(&div, FLEX_DIR_COLUMN);
-  setJustifyContent(&div, JUSTIFY_CONTENT_CENTER);
+  setFlexDirection(&div, FLEX_DIR_ROW);
+  setJustifyContent(&div, ALIGN_CENTER);
+  setAlignItems(&div, ALIGN_CENTER);
 
-  Node children[2] = {makeTextNode("Hello "), makeTextNode("world!")};
+  Node children[2] = {makeTextNode("Hi"), makeTextNode("world!")};
   div.children = children;
   div.num_children = 2;
 

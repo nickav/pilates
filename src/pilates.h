@@ -167,12 +167,19 @@ void resolvePrimarySize(Node *node) {
 void calcHeights(Node *node) {
 }
 
-
 void calcPositions(Node *node) {
   // flex-wrap: no-wrap;
 
+  float totalSize = 0.f;
+  ForEachChild(node, {
+      totalSize +=child->width;
+  });
+
   float prevPos = 0.f;
   ForEachChild(node, {
+    if (totalSize > node->width) {
+      child->width *= node->width / totalSize;
+    }
     child->x = prevPos;
     prevPos += child->width;
   });

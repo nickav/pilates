@@ -27,8 +27,10 @@ void printNode(Node *node, PrintFunc *printf, int indent = 0) {
     printf("TextNode: %s - %f %f %f %f", node->text, node->x, node->y,
            node->width, node->height);
   } else {
-    printf("DivNode: %f %f %f %f\n", node->x, node->y, node->width,
+    printf("DivNode: %f %f %f %f", node->x, node->y, node->width,
            node->height);
+
+    if (node->num_children > 0) printf("\n");
 
     for (int i = 0; i < node->num_children; i++) {
       printNode(&node->children[i], printf, indent + 2);
@@ -101,7 +103,7 @@ void asciiRender(Node *node) {
   printf("width: %d\nheight: %d\n", width, height);
 
   // print the grid
-  for (int i = 0; i < width; i++)
+  for (int i = 0; i < width * 2; i++)
     printf("-");
   printf("\n");
 
@@ -125,8 +127,9 @@ void asciiRender(Node *node) {
     prevColor = 0;
   }
 
-  for (int i = 0; i < width; i++)
+  for (int i = 0; i < width * 2; i++)
     printf("-");
 
   free(buffer);
+  free(colorBuf);
 }

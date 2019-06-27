@@ -44,7 +44,7 @@ PILATES_MEASURE_TEXT(asciiMeasureText) {
 }
 
 // TODO: bounds check on all parts of the node (x, y, width, height)
-void asciiRenderNode(Node *node, char *output, int width, int height) {
+void asciiRenderNode(Node *node, char *output, char *colorOutput, int width, int height) {
   // we have the node's position
 
   if (node->type == TEXT) {
@@ -66,9 +66,24 @@ void asciiRenderNode(Node *node, char *output, int width, int height) {
     }
 
   } else {
-    ForEachChild(node, { asciiRenderNode(child, output, width, height); });
+    // copy width * height of the corresponding colors item to the colorOutput at index 0
+    for (int x = node->x; x < node->x + node->width; x++) {
+      for (int y = node->y; y < node->y + node->height; y++) {
+        colorOutput[y * width + x] = node->id;
+      }
+    }
+
+    ForEachChild(node, { asciiRenderNode(child, output, colorOutput, width, height); });
   }
 }
+
+const char *colors[] = {
+    "\033[0m",    // none
+    "\033[1;41m", // red
+    "\033[1;42m", // green
+    "\033[1;43m", // yellow
+    "\033[1;44m", // blue
+};
 
 void asciiRender(Node *node) {
   int width = (int)node->width;
@@ -79,8 +94,9 @@ void asciiRender(Node *node) {
   char *buffer = (char *)malloc(sizeof(char) * (buf_len));
   memset(buffer, ' ', buf_len);
   buffer[buf_len] = '\0';
+  char *colorBuf = (char *)malloc(sizeof(char) * (buf_len));
 
-  asciiRenderNode(node, buffer, width, height);
+  asciiRenderNode(node, buffer, colorBuf, width, height);
 
   printf("width: %d\nheight: %d\n", width, height);
 
@@ -89,9 +105,21 @@ void asciiRender(Node *node) {
     printf("-");
   printf("\n");
 
-  for (int i = 0; i < height; i++) {
-    fwrite(&buffer[i * width], 1, width, stdout);
-    printf("\n");
+  char prevColor = 0;
+  for (int y = 0; y < height; y++) {
+    for (int x = 0; x < width; x++) {
+      int i = width * y + x;
+
+      char currColor = colorBuf[i];
+      if (prevColor != currColor) {
+        printf("%s", colors[colorBuf[i]]);
+        prevColor = currColor;
+      }
+
+      putchar(buffer[i]);
+    }
+    printf("%s\n", colors[0]);
+    prevColor = 0;
   }
 
   for (int i = 0; i < width; i++)

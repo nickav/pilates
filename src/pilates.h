@@ -79,40 +79,6 @@ createPropSetter(setJustifyContent, JUSTIFY_CONTENT);
 
 #undef createPropSetter
 
-void updateNodeSize(int axis, Node *node, float &primaryAxisSize) {
-  // primaryAxisSize is the total size of the children
-  primaryAxisSize = 0;
-  float secondaryAxisSize = 0;
-
-  if (axis == PILATES_ROW) {
-    ForEachChild(node, {
-      primaryAxisSize += child->width;
-      secondaryAxisSize = Max(secondaryAxisSize, child->height);
-    });
-
-    if (node->width == 0) {
-      node->width = primaryAxisSize;
-    }
-    if (node->height == 0) {
-      node->height = Max(secondaryAxisSize, node->height);
-    }
-  }
-
-  if (axis == PILATES_COLUMN) {
-    ForEachChild(node, {
-      primaryAxisSize += child->height;
-      secondaryAxisSize = Max(secondaryAxisSize, child->width);
-    });
-
-    if (node->height == 0) {
-      node->height = primaryAxisSize;
-    }
-    if (node->width == 0) {
-      node->width = Max(secondaryAxisSize, node->width);
-    }
-  }
-}
-
 int calcAxisOffset(int value, int childrenSize, int parentSize) {
   switch (value) {
   case PILATES_ALIGN_CENTER:
@@ -163,101 +129,26 @@ int computeTextLineHeight(int fontId, MeasureTextFunc *measureText, char *text,
   return lines;
 }
 
-// TODOs
-// The height of the parent needs to grow based on the height of the wrapped
-// children if no height is provided
-// TODO: don't try to write outside of buffer range
-// We need to wrap text
-// The height is wrong
+void computeWidths(Node *node, MeasureTextFunc *measureText) {
+}
+
+// 1. dimension computing (fill in the blank widths)
+// a. calculate what each children's dimensions would be in an ideal world
+// b. add widths to things that don't have widths
+
+// 2. dimension resolution
+// based on flex prop and current width, and flex-wrap
+
+// 3. calculate heights
+
+// 4. layout things
 
 void layoutNodes(Node *node, MeasureTextFunc *measureText) {
   if (node->type == TEXT) {
-    // given a max-width and a measuretext func and the text to measure,
-    // and the font id, give us the height
-    measureText(0, node->text, 0, &node->width, &node->height);
     return;
   }
 
   if (node->type == DIV) {
-    // compute dimensions on each node
-    ForEachChild(node, {
-      layoutNodes(child, measureText);
-      node->height = Max(node->height, child->height);
-    });
-
-    int flexDir = node->props[FLEX_DIRECTION];
-    int justifyContent = node->props[JUSTIFY_CONTENT];
-    int alignItems = node->props[ALIGN_ITEMS];
-
-    float parentPrimarySize =
-        flexDir == PILATES_ROW ? node->width : node->height;
-    float parentSecondarySize =
-        flexDir == PILATES_ROW ? node->height : node->width;
-
-    // compute total size of children
-    float childrenPrimarySize;
-    updateNodeSize(flexDir, node, childrenPrimarySize);
-
-    // if childrenPrimarySize is larger than node.width, we need to wrap
-    if (parentPrimarySize < childrenPrimarySize) {
-      childrenPrimarySize = parentPrimarySize;
-
-      ForEachChild(node, {
-        if (flexDir == PILATES_ROW) {
-          child->width = childrenPrimarySize / node->num_children;
-          child->height =
-              computeTextLineHeight(0, measureText, child->text, child->width);
-        } else {
-          child->height = childrenPrimarySize / node->num_children;
-          child->width =
-              computeTextLineHeight(0, measureText, child->text, child->height);
-        }
-      });
-    }
-
-    // TODO: fix for FLEX_ROW
-    /*
-    childrenPrimarySize = 0.f;
-    ForEachChild(node, {
-      if (flexDir == PILATES_ROW) {
-        if (child->height > node->height) {
-          child->height = node->height;
-          child->width =
-              computeTextLineHeight(0, measureText, child->text, child->height);
-        }
-
-        childrenPrimarySize += child->width;
-      } else {
-        if (child->width > node->width) {
-          child->width = node->width;
-          child->height =
-              computeTextLineHeight(0, measureText, child->text, child->width);
-        }
-
-        childrenPrimarySize += child->height;
-      }
-    });
-    */
-
-    // start of primary axis children box
-    float primaryOffset =
-        calcAxisOffset(justifyContent, childrenPrimarySize, parentPrimarySize);
-
-    float pPos = primaryOffset;
-    for (int i = 0; i < node->num_children; i++) {
-      Node *child = &node->children[i];
-      if (flexDir == PILATES_ROW) {
-        child->x = pPos;
-        pPos += child->width;
-        child->y =
-            calcAxisOffset(alignItems, child->height, parentSecondarySize);
-      } else {
-        child->y = pPos;
-        pPos += child->height;
-        child->x =
-            calcAxisOffset(alignItems, child->width, parentSecondarySize);
-      }
-    }
 
     return;
   }

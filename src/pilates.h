@@ -132,6 +132,27 @@ int computeTextLineHeight(int fontId, MeasureTextFunc *measureText, char *text,
 void computeWidths(Node *node, MeasureTextFunc *measureText) {
 }
 
+void computePrimarySize(Node *node, MeasureTextFunc *measureText) {
+  if (node->type == TEXT) {
+    measureText(0, node->text, 0, &node->width, &node->height);
+    return;
+  }
+
+  if (node->type == DIV) {
+    return;
+  }
+}
+
+void resolvePrimarySize(Node *node) {
+  if (node->type == TEXT) {
+    return;
+  }
+
+  if (node->type == DIV) {
+    return;
+  }
+}
+
 // 1. dimension computing (fill in the blank widths)
 // a. calculate what each children's dimensions would be in an ideal world
 // b. add widths to things that don't have widths
@@ -141,15 +162,31 @@ void computeWidths(Node *node, MeasureTextFunc *measureText) {
 
 // 3. calculate heights
 
-// 4. layout things
+// 4. find positions
+
+void calcHeights(Node *node) {
+}
+
+
+void calcPositions(Node *node) {
+  // flex-wrap: no-wrap;
+
+  float prevPos = 0.f;
+  ForEachChild(node, {
+    child->x = prevPos;
+    prevPos += child->width;
+  });
+}
 
 void layoutNodes(Node *node, MeasureTextFunc *measureText) {
-  if (node->type == TEXT) {
-    return;
-  }
+  // 1.
+  computePrimarySize(node, measureText);
 
-  if (node->type == DIV) {
+  // 2.
+  resolvePrimarySize(node);
 
-    return;
-  }
+  // 3.
+  calcHeights(node);
+
+  calcPositions(node);
 }

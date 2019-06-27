@@ -116,8 +116,11 @@ void asciiRender(Node *node) {
         prevColor = currColor;
       }
 
+      // because ascii chars have about a 1:2 ratio, stretch by x:
+      putchar(buffer[i]);
       putchar(buffer[i]);
     }
+
     printf("%s\n", colors[0]);
     prevColor = 0;
   }

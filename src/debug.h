@@ -36,8 +36,6 @@ void printNode(Node *node, PrintFunc *printf, int indent = 0) {
       printNode(&node->children[i], printf, indent + 2);
     }
   }
-
-  printf("\n");
 }
 
 PILATES_MEASURE_TEXT(asciiMeasureText) {
@@ -99,8 +97,6 @@ void asciiRender(Node *node) {
   char *colorBuf = (char *)malloc(sizeof(char) * (buf_len));
 
   asciiRenderNode(node, buffer, colorBuf, width, height);
-
-  printf("width: %d\nheight: %d\n", width, height);
 
   // print the grid
   for (int i = 0; i < width * 2; i++)

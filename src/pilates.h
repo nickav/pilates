@@ -80,6 +80,20 @@ void setNodeSize(Node *node, int width, int height) {
   node->height = height;
 }
 
+void setPos1(Node *node, int dir, float x) { (&node->x)[dir] = x; }
+float getPos1(Node *node, int dir) { return (&node->x)[dir]; }
+
+void setPos2(Node *node, int dir, float y) { (&node->y)[-dir] = y; }
+float getPos2(Node *node, int dir) { return (&node->y)[-dir]; }
+
+void setSize1(Node *node, int dir, float width) { (&node->width)[dir] = width; }
+float getSize1(Node *node, int dir) { return (&node->width)[dir]; }
+
+void setSize2(Node *node, int dir, float height) {
+  (&node->height)[-dir] = height;
+}
+float getSize2(Node *node, int dir) { return (&node->height)[-dir]; }
+
 #define createPropSetter(PropName, PropType)                                   \
   void PropName(Node *node, int value) { node->props[PropType] = value; }
 
@@ -231,51 +245,46 @@ void calcSecondarySizes(Node *node) {}
 void calcPositions(Node *node) {
   // flex-wrap: no-wrap;
 
+  int d = node->props[FLEX_DIRECTION];
+
   float totalSize = 0.f;
-  ForEachChild(node, { totalSize += child->width; });
+  ForEachChild(node, { totalSize += getSize1(child, d); });
 
   float axisOffset = calcGroupOffset(node->props[JUSTIFY_CONTENT], totalSize,
-                                     node->width, node->num_children);
-  float primaryAdvance = calcChildSpacing(
-      node->props[JUSTIFY_CONTENT], totalSize, node->width, node->num_children);
+                                     getSize1(node, d), node->num_children);
+  float primaryAdvance =
+      calcChildSpacing(node->props[JUSTIFY_CONTENT], totalSize,
+                       getSize1(node, d), node->num_children);
 
   float prevPos = axisOffset;
   ForEachChild(node, {
-    if (totalSize > node->width) {
-      child->width *= node->width / totalSize;
+    float nodeWidth = getSize1(node, d);
+    if (totalSize > nodeWidth) {
+      setSize1(child, d, getSize1(child, d) * nodeWidth / totalSize);
     }
 
-    child->y =
-        calcChildOffset(node->props[ALIGN_ITEMS], child->height, node->height);
-    child->x = prevPos;
-    prevPos += child->width + primaryAdvance;
+    setPos2(child, d,
+            calcChildOffset(node->props[ALIGN_ITEMS], getSize2(child, d),
+                            getSize2(node, d)));
+    setPos1(child, d, prevPos);
+    prevPos += getSize1(child, d) + primaryAdvance;
   });
-}
 
-void flipNode(Node *node) {
-  float x = node->x;
-  node->x = node->y;
-  node->y = x;
-  float width = node->width;
-  node->width = node->height;
-  node->height = width;
-}
-
-void adjustAxis(Node *node) {
-  if (node->props[FLEX_DIRECTION] == PILATES_COLUMN) {
-    flipNode(node);
-    ForEachChild(node, {
-      flipNode(child);
-      adjustAxis(child);
-    });
-  } else {
-    ForEachChild(node, { adjustAxis(child); });
+  if (node->type == DIV) {
+    ForEachChild(node, { calcPositions(child); });
   }
 }
 
-void layoutNodes(Node *node, MeasureTextFunc *measureText) {
-  adjustAxis(node);
+void convertToAbsolute(Node *node) {
+  ForEachChild(node, {
+    child->x += node->x;
+    child->y += node->y;
 
+    convertToAbsolute(child);
+  });
+}
+
+void layoutNodes(Node *node, MeasureTextFunc *measureText) {
   computePrimarySize(node, measureText);
 
   resolvePrimarySize(node);
@@ -284,5 +293,5 @@ void layoutNodes(Node *node, MeasureTextFunc *measureText) {
 
   calcPositions(node);
 
-  adjustAxis(node);
+  convertToAbsolute(node);
 }

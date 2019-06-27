@@ -4,8 +4,14 @@
 
 #include <stdio.h>
 
-int main() {
-  /*
+void layoutAndPrint(Node *root) {
+  layoutNodes(root, asciiMeasureText);
+  printNode(root, printf);
+  printf("\n");
+  asciiRender(root);
+}
+
+void example1() {
   Node div = divNode();
   div.width = 24;
   div.height = 32;
@@ -33,31 +39,43 @@ int main() {
   Node children[4] = {div1, div2, div3, div4};
   div.children = children;
   div.num_children = 4;
-  */
 
+  layoutAndPrint(&div);
+}
+
+void example2() {
   Node div = divNode();
-  div.width = 8;
-  div.height = 16;
+  div.width = 32;
+  div.height = 32;
 
-  setFlexDirection(&div, PILATES_COLUMN);
+  setFlexDirection(&div, PILATES_ROW);
   setJustifyContent(&div, PILATES_ALIGN_CENTER);
   setAlignItems(&div, PILATES_ALIGN_END);
 
   Node div1 = divNode();
-  setNodeSize(&div1, 4, 8);
+  setNodeSize(&div1, 8, 16);
   div1.id = 1;
+
+  setFlexDirection(&div1, PILATES_ROW);
+  setJustifyContent(&div1, PILATES_ALIGN_CENTER);
+  setAlignItems(&div1, PILATES_ALIGN_END);
+
+  Node div2 = divNode();
+  setNodeSize(&div2, 6, 4);
+  div2.id = 2;
+
+  Node div1Children[1] = {div2};
+  div1.children = div1Children;
+  div1.num_children = 1;
 
   Node children[1] = {div1};
   div.children = children;
   div.num_children = 1;
 
-  layoutNodes(&div, asciiMeasureText);
+  layoutAndPrint(&div);
+}
 
-  printNode(&div, printf);
-
-  printf("\n");
-
-  asciiRender(&div);
-
+int main() {
+  example2();
   return 0;
 }

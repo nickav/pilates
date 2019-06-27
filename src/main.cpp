@@ -10,21 +10,21 @@ int main() {
   div.height = 14;
 
   setFlexDirection(&div, PILATES_ROW);
-  //setJustifyContent(&div, PILATES_ALIGN_CENTER);
+  setJustifyContent(&div, PILATES_SPACE_AROUND);
   //setAlignItems(&div, PILATES_ALIGN_CENTER);
 
   Node div1 = divNode();
-  div1.width = 8;
+  div1.width = 4;
   div1.height = 4;
   div1.id = 1;
 
   Node div2 = divNode();
-  div2.width = 8;
+  div2.width = 4;
   div2.height = 4;
   div2.id = 2;
 
   Node div3 = divNode();
-  div3.width = 16;
+  div3.width = 4;
   div3.height = 4;
   div3.id = 3;
 

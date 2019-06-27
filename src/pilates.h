@@ -23,12 +23,12 @@
 #define PILATES_COLUMN 1
 
 // both for justify-content and align-items
-#define PILATES_ALIGN_NORMAL 0
+#define PILATES_ALIGN_START 0
 #define PILATES_ALIGN_CENTER 1
 #define PILATES_ALIGN_END 2
 #define PILATES_SPACE_BETWEEN 3
 #define PILATES_SPACE_AROUND 4
-#define PILATES_SPACE_EVENLY 4
+#define PILATES_SPACE_EVENLY 5
 
 #define PILATES_MEASURE_TEXT(Name)                                             \
   void Name(int fontId, char *text, int n, float *width, float *height)
@@ -79,16 +79,71 @@ createPropSetter(setJustifyContent, JUSTIFY_CONTENT);
 
 #undef createPropSetter
 
-int calcAxisOffset(int value, int childrenSize, int parentSize) {
+float calcChildOffset(int value, float size, float parentSize) {
+  // don't allow overflow
+  size = Min(parentSize, size);
+
   switch (value) {
   case PILATES_ALIGN_CENTER:
-    return (parentSize - childrenSize) / 2;
+    return (parentSize - size) / 2;
   case PILATES_ALIGN_END:
-    return parentSize - childrenSize;
-  case PILATES_ALIGN_NORMAL:
+    return parentSize - size;
+  case PILATES_ALIGN_START:
   default:
     return 0;
   }
+}
+
+float calcGroupOffset(int value, float size, float parentSize, int n) {
+  // don't allow overflow
+  size = Min(parentSize, size);
+
+  switch (value) {
+    // alignment
+  case PILATES_ALIGN_START: {
+    return 0;
+  }
+  case PILATES_ALIGN_CENTER: {
+    return (parentSize - size) / 2;
+  }
+  case PILATES_ALIGN_END: {
+    return parentSize - size;
+  }
+
+    // spacing
+  case PILATES_SPACE_EVENLY: {
+    return (parentSize - size) / (n + 1);
+  }
+  case PILATES_SPACE_AROUND: {
+    return (parentSize - size) / (2 * n);
+  }
+  case PILATES_SPACE_BETWEEN: {
+    return 0;
+  }
+
+  default: {
+    return 0;
+  }
+  }
+}
+
+float calcChildSpacing(int value, float size, float parentSize, int n) {
+  size = Min(parentSize, size);
+
+  switch (value) {
+  case PILATES_SPACE_EVENLY: {
+    return (parentSize - size) / (n + 1);
+  }
+  case PILATES_SPACE_AROUND: {
+    return (parentSize - size) / n;
+  }
+  case PILATES_SPACE_BETWEEN: {
+    return (parentSize - size) / (n - 1);
+  }
+  default:
+    return 0;
+  }
+
 }
 
 int strpos(char *str, char search, int offset) {
@@ -129,8 +184,7 @@ int computeTextLineHeight(int fontId, MeasureTextFunc *measureText, char *text,
   return lines;
 }
 
-void computeWidths(Node *node, MeasureTextFunc *measureText) {
-}
+void computeWidths(Node *node, MeasureTextFunc *measureText) {}
 
 void computePrimarySize(Node *node, MeasureTextFunc *measureText) {
   if (node->type == TEXT) {
@@ -164,36 +218,35 @@ void resolvePrimarySize(Node *node) {
 
 // 4. find positions
 
-void calcHeights(Node *node) {
-}
+void calcSecondarySizes(Node *node) {}
 
 void calcPositions(Node *node) {
   // flex-wrap: no-wrap;
 
   float totalSize = 0.f;
-  ForEachChild(node, {
-      totalSize +=child->width;
-  });
+  ForEachChild(node, { totalSize += child->width; });
 
-  float prevPos = 0.f;
+  float axisOffset = calcGroupOffset(node->props[JUSTIFY_CONTENT], totalSize,
+                                     node->width, node->num_children);
+  float primaryAdvance = calcChildSpacing(node->props[JUSTIFY_CONTENT], totalSize, node->width, node->num_children);
+
+  float prevPos = axisOffset;
   ForEachChild(node, {
     if (totalSize > node->width) {
       child->width *= node->width / totalSize;
     }
+
     child->x = prevPos;
-    prevPos += child->width;
+    prevPos += child->width + primaryAdvance;
   });
 }
 
 void layoutNodes(Node *node, MeasureTextFunc *measureText) {
-  // 1.
   computePrimarySize(node, measureText);
 
-  // 2.
   resolvePrimarySize(node);
 
-  // 3.
-  calcHeights(node);
+  calcSecondarySizes(node);
 
   calcPositions(node);
 }

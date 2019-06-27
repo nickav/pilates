@@ -18,6 +18,10 @@
 
 // Library Macros
 
+#define PILATES_MEASURE_TEXT(Name)                                             \
+  void Name(int fontId, char *text, int n, float *width, float *height)
+typedef PILATES_MEASURE_TEXT(MeasureTextFunc);
+
 // flex-direction
 #define PILATES_ROW 0
 #define PILATES_COLUMN 1
@@ -30,13 +34,19 @@
 #define PILATES_SPACE_AROUND 4
 #define PILATES_SPACE_EVENLY 5
 
-#define PILATES_MEASURE_TEXT(Name)                                             \
-  void Name(int fontId, char *text, int n, float *width, float *height)
-typedef PILATES_MEASURE_TEXT(MeasureTextFunc);
+#define PILATES_NO_WRAP 0
+//#define PILATES_WRAP 1
 
 enum NodeType { DIV, TEXT, NodeType_COUNT };
 
-enum PropType { FLEX_DIRECTION, JUSTIFY_CONTENT, ALIGN_ITEMS, PropType_COUNT };
+enum PropType {
+  FLEX_DIRECTION,
+  FLEX_WRAP,
+  JUSTIFY_CONTENT,
+  ALIGN_ITEMS,
+  ALIGN_SELF,
+  PropType_COUNT
+};
 
 struct Node {
   NodeType type;
@@ -143,7 +153,6 @@ float calcChildSpacing(int value, float size, float parentSize, int n) {
   default:
     return 0;
   }
-
 }
 
 int strpos(char *str, char search, int offset) {
@@ -217,7 +226,6 @@ void resolvePrimarySize(Node *node) {
 // 3. calculate heights
 
 // 4. find positions
-
 void calcSecondarySizes(Node *node) {}
 
 void calcPositions(Node *node) {
@@ -228,7 +236,8 @@ void calcPositions(Node *node) {
 
   float axisOffset = calcGroupOffset(node->props[JUSTIFY_CONTENT], totalSize,
                                      node->width, node->num_children);
-  float primaryAdvance = calcChildSpacing(node->props[JUSTIFY_CONTENT], totalSize, node->width, node->num_children);
+  float primaryAdvance = calcChildSpacing(
+      node->props[JUSTIFY_CONTENT], totalSize, node->width, node->num_children);
 
   float prevPos = axisOffset;
   ForEachChild(node, {
@@ -236,6 +245,7 @@ void calcPositions(Node *node) {
       child->width *= node->width / totalSize;
     }
 
+    child->y = calcChildOffset(node->props[ALIGN_ITEMS], child->height, node->height);
     child->x = prevPos;
     prevPos += child->width + primaryAdvance;
   });

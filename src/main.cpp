@@ -10,27 +10,28 @@ int main() {
   div.height = 14;
 
   setFlexDirection(&div, PILATES_ROW);
-  setJustifyContent(&div, PILATES_SPACE_AROUND);
-  //setAlignItems(&div, PILATES_ALIGN_CENTER);
+  setJustifyContent(&div, PILATES_ALIGN_END);
+  setAlignItems(&div, PILATES_ALIGN_CENTER);
 
   Node div1 = divNode();
-  div1.width = 4;
-  div1.height = 4;
+  setNodeSize(&div1, 4, 4);
   div1.id = 1;
 
   Node div2 = divNode();
-  div2.width = 4;
-  div2.height = 4;
+  setNodeSize(&div2, 4, 4);
   div2.id = 2;
 
   Node div3 = divNode();
-  div3.width = 4;
-  div3.height = 4;
+  setNodeSize(&div3, 4, 4);
   div3.id = 3;
 
-  Node children[3] = {div1, div2, div3};
+  Node div4 = divNode();
+  setNodeSize(&div4, 4, 4);
+  div4.id = 4;
+
+  Node children[4] = {div1, div2, div3, div4};
   div.children = children;
-  div.num_children = 3;
+  div.num_children = 4;
 
   layoutNodes(&div, asciiMeasureText);
 

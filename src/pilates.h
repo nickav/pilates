@@ -245,13 +245,37 @@ void calcPositions(Node *node) {
       child->width *= node->width / totalSize;
     }
 
-    child->y = calcChildOffset(node->props[ALIGN_ITEMS], child->height, node->height);
+    child->y =
+        calcChildOffset(node->props[ALIGN_ITEMS], child->height, node->height);
     child->x = prevPos;
     prevPos += child->width + primaryAdvance;
   });
 }
 
+void flipNode(Node *node) {
+  float x = node->x;
+  node->x = node->y;
+  node->y = x;
+  float width = node->width;
+  node->width = node->height;
+  node->height = width;
+}
+
+void adjustAxis(Node *node) {
+  if (node->props[FLEX_DIRECTION] == PILATES_COLUMN) {
+    flipNode(node);
+    ForEachChild(node, {
+      flipNode(child);
+      adjustAxis(child);
+    });
+  } else {
+    ForEachChild(node, { adjustAxis(child); });
+  }
+}
+
 void layoutNodes(Node *node, MeasureTextFunc *measureText) {
+  adjustAxis(node);
+
   computePrimarySize(node, measureText);
 
   resolvePrimarySize(node);
@@ -259,4 +283,6 @@ void layoutNodes(Node *node, MeasureTextFunc *measureText) {
   calcSecondarySizes(node);
 
   calcPositions(node);
+
+  adjustAxis(node);
 }

@@ -36,6 +36,7 @@ typedef PILATES_MEASURE_TEXT(MeasureTextFunc);
 #define PILATES_SPACE_AROUND 4
 #define PILATES_SPACE_EVENLY 5
 
+// flex-wrap
 #define PILATES_NO_WRAP 0
 #define PILATES_WRAP 1
 

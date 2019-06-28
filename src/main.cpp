@@ -8,11 +8,11 @@ Node makeDivNode(float width, float height, Node *children = NULL,
                  int num_children = 0) {
   static int id = 1;
   return Node{
-    .id = id++,
-    .width = width,
-    .height = height,
-    .children = children,
-    .num_children = num_children,
+      .id = id++,
+      .width = width,
+      .height = height,
+      .children = children,
+      .num_children = num_children,
   };
 }
 
@@ -24,67 +24,34 @@ void layoutAndPrint(Node *root) {
 }
 
 void example1() {
-  Node div = divNode();
-  div.width = 24;
-  div.height = 32;
+  Node children[] = {makeDivNode(4, 4), makeDivNode(4, 4), makeDivNode(4, 4),
+                     makeDivNode(4, 4)};
+  Node root = makeDivNode(24, 32, children, ArrayCount(children));
+  root.id = 0;
 
-  setFlexDirection(&div, PILATES_ROW);
-  setJustifyContent(&div, PILATES_SPACE_BETWEEN);
-  setAlignItems(&div, PILATES_ALIGN_CENTER);
+  setFlexDirection(&root, PILATES_ROW);
+  setJustifyContent(&root, PILATES_SPACE_BETWEEN);
+  setAlignItems(&root, PILATES_ALIGN_CENTER);
 
-  Node div1 = divNode();
-  setNodeSize(&div1, 4, 4);
-  div1.id = 1;
-
-  Node div2 = divNode();
-  setNodeSize(&div2, 4, 4);
-  div2.id = 2;
-
-  Node div3 = divNode();
-  setNodeSize(&div3, 4, 4);
-  div3.id = 3;
-
-  Node div4 = divNode();
-  setNodeSize(&div4, 4, 4);
-  div4.id = 4;
-
-  Node children[4] = {div1, div2, div3, div4};
-  div.children = children;
-  div.num_children = 4;
-
-  layoutAndPrint(&div);
+  layoutAndPrint(&root);
 }
 
 void example2() {
-  Node div = divNode();
-  div.width = 32;
-  div.height = 32;
+  Node childChildren[] = {makeDivNode(6, 4)};
+  Node children[] = {makeDivNode(8, 16, childChildren, ArrayCount(childChildren))};
+  Node root = makeDivNode(32, 32, children, ArrayCount(children));
+  root.id = 0;
 
-  setFlexDirection(&div, PILATES_ROW);
-  setJustifyContent(&div, PILATES_ALIGN_CENTER);
-  setAlignItems(&div, PILATES_ALIGN_END);
+  setFlexDirection(&root, PILATES_ROW);
+  setJustifyContent(&root, PILATES_ALIGN_CENTER);
+  setAlignItems(&root, PILATES_ALIGN_END);
 
-  Node div1 = divNode();
-  setNodeSize(&div1, 8, 16);
-  div1.id = 1;
+  Node *div1 = &children[0];
+  setFlexDirection(div1, PILATES_ROW);
+  setJustifyContent(div1, PILATES_ALIGN_CENTER);
+  setAlignItems(div1, PILATES_ALIGN_END);
 
-  setFlexDirection(&div1, PILATES_ROW);
-  setJustifyContent(&div1, PILATES_ALIGN_CENTER);
-  setAlignItems(&div1, PILATES_ALIGN_END);
-
-  Node div2 = divNode();
-  setNodeSize(&div2, 6, 4);
-  div2.id = 2;
-
-  Node div1Children[1] = {div2};
-  div1.children = div1Children;
-  div1.num_children = 1;
-
-  Node children[1] = {div1};
-  div.children = children;
-  div.num_children = 1;
-
-  layoutAndPrint(&div);
+  layoutAndPrint(&root);
 }
 
 void example3() {
@@ -94,7 +61,7 @@ void example3() {
 
   setFlexDirection(&root, PILATES_ROW);
   setFlexGrow(&root.children[0], 1);
-  //setFlexGrow(&root.children[1], 1);
+  // setFlexGrow(&root.children[1], 1);
   layoutAndPrint(&root);
 }
 

@@ -38,10 +38,9 @@ void printNode(Node *node, PrintFunc *printf, int indent = 0) {
   // print flex props
   printf("\n  %s", indent_str);
   printf("flex-grow: %.2f;", getFlexGrow(node));
+  printf("\n");
 
   if (node->num_children > 0) {
-    printf("\n");
-
     for (int i = 0; i < node->num_children; i++) {
       printNode(&node->children[i], printf, indent + 2);
     }

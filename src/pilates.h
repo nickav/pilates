@@ -215,9 +215,7 @@ int computeTextLineHeight(int fontId, MeasureTextFunc *measureText, char *text,
   return lines;
 }
 
-void computeWidths(Node *node, MeasureTextFunc *measureText) {}
-
-void computePrimarySize(Node *node, MeasureTextFunc *measureText) {
+void computeAutoPrimarySizes(Node *node, MeasureTextFunc *measureText) {
   if (node->type == TEXT) {
     measureText(0, node->text, 0, &node->width, &node->height);
     return;
@@ -229,6 +227,30 @@ void computePrimarySize(Node *node, MeasureTextFunc *measureText) {
 }
 
 void resolvePrimarySize(Node *node) {
+  int d = getFlexDirection(node);
+
+  float totalSize = 0;
+  float totalWeight = 0;
+  ForEachChild(node, {
+    float grow = getFlexGrow(child);
+    totalWeight += grow;
+
+    if (grow == 0) {
+      totalSize += getSize1(child, d);
+    }
+  });
+
+  if (totalWeight > 0) {
+    float size = getSize1(node, d) - totalSize;
+
+    ForEachChild(node, {
+      float grow = getFlexGrow(child);
+      if (grow > 0) {
+        setSize1(child, d, size * (getFlexGrow(child) / totalWeight));
+      }
+    });
+  }
+
   if (node->type == TEXT) {
     return;
   }
@@ -238,19 +260,6 @@ void resolvePrimarySize(Node *node) {
   }
 }
 
-// Given a tree of nodes, produces the relative positions of all of them on
-// screen:
-
-// 1. dimension computing (fill in the blank widths)
-// a. calculate what each children's dimensions would be in an ideal world
-// b. add widths to things that don't have widths
-
-// 2. dimension resolution
-// based on flex prop and current width, and flex-wrap
-
-// 3. calculate heights
-
-// 4. find positions
 void calcSecondarySizes(Node *node) {}
 
 void calcPositions(Node *node) {
@@ -286,17 +295,34 @@ void calcPositions(Node *node) {
   }
 }
 
-void convertToAbsolute(Node *node) {
+void relativeToAbsolute(Node *node) {
   ForEachChild(node, {
     child->x += node->x;
     child->y += node->y;
-
-    convertToAbsolute(child);
+    relativeToAbsolute(child);
   });
 }
 
+// Given a tree of nodes, produces the relative positions of all of them on
+// screen:
+
+// 1. primary dimension computing (fill in the auto widths)
+//   a. calculate what each children's dimensions would be in an ideal world (no
+//   wrapping) b. add widths to things that don't have widths
+
+// 2. dimension resolution
+// based on width, flex-grow and flex-wrap resolve what the width of the node
+// should be
+
+// 3. calculate heights
+// based on text wrapping and aspect-ratio, compute the height of the elements
+
+// 4. find positions
+// layout the nodes (giving relative positions to their parents) based on
+// spacing and wrapping
+
 void layoutNodes(Node *node, MeasureTextFunc *measureText) {
-  computePrimarySize(node, measureText);
+  computeAutoPrimarySizes(node, measureText);
 
   resolvePrimarySize(node);
 
@@ -304,5 +330,5 @@ void layoutNodes(Node *node, MeasureTextFunc *measureText) {
 
   calcPositions(node);
 
-  convertToAbsolute(node);
+  relativeToAbsolute(node);
 }

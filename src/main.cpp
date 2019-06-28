@@ -89,12 +89,12 @@ void example2() {
 
 void example3() {
   Node children[] = {makeDivNode(4, 4), makeDivNode(4, 4)};
-  Node root = makeDivNode(24, 16, children, 2);
+  Node root = makeDivNode(24, 16, children, ArrayCount(children));
   root.id = 0;
 
   setFlexDirection(&root, PILATES_ROW);
   setFlexGrow(&root.children[0], 1);
-  setFlexGrow(&root.children[1], 1);
+  //setFlexGrow(&root.children[1], 1);
   layoutAndPrint(&root);
 }
 

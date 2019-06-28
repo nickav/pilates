@@ -16,6 +16,8 @@
 #define Max(a, b) (a > b ? a : b)
 #define Min(a, b) (a < b ? a : b)
 
+#define ArrayCount(Array) (sizeof(Array) / sizeof((Array)[0]))
+
 // Library Macros
 
 #define PILATES_MEASURE_TEXT(Name)                                             \
@@ -229,34 +231,37 @@ void computeAutoPrimarySizes(Node *node, MeasureTextFunc *measureText) {
 void resolvePrimarySize(Node *node) {
   int d = getFlexDirection(node);
 
-  float totalSize = 0;
+  float totalFixedSize = 0;
   float totalWeight = 0;
+
   ForEachChild(node, {
     float grow = getFlexGrow(child);
     totalWeight += grow;
-
     if (grow == 0) {
-      totalSize += getSize1(child, d);
+      totalFixedSize += getSize1(child, d);
     }
   });
 
+  // if the totalFixedSize is > the node.width (overflow), we need to treat
+  // the child size as flex-grow
+  if (totalFixedSize > getSize1(node, d)) {
+    totalFixedSize = 0;
+
+    ForEachChild(node, {
+      float size1 = getSize1(child, d);
+      setFlexGrow(child, size1 > 0 ? size1 : 0);
+    });
+  }
+
   if (totalWeight > 0) {
-    float size = getSize1(node, d) - totalSize;
+    float size = getSize1(node, d) - totalFixedSize;
 
     ForEachChild(node, {
       float grow = getFlexGrow(child);
       if (grow > 0) {
-        setSize1(child, d, size * (getFlexGrow(child) / totalWeight));
+        setSize1(child, d, size * (grow / totalWeight));
       }
     });
-  }
-
-  if (node->type == TEXT) {
-    return;
-  }
-
-  if (node->type == DIV) {
-    return;
   }
 }
 

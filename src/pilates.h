@@ -35,12 +35,13 @@ typedef PILATES_MEASURE_TEXT(MeasureTextFunc);
 #define PILATES_SPACE_EVENLY 5
 
 #define PILATES_NO_WRAP 0
-//#define PILATES_WRAP 1
+#define PILATES_WRAP 1
 
 enum NodeType { DIV, TEXT, NodeType_COUNT };
 
 enum PropType {
   FLEX_DIRECTION,
+  FLEX_GROW,
   FLEX_WRAP,
   JUSTIFY_CONTENT,
   ALIGN_ITEMS,
@@ -86,22 +87,29 @@ float getPos1(Node *node, int dir) { return (&node->x)[dir]; }
 void setPos2(Node *node, int dir, float y) { (&node->y)[-dir] = y; }
 float getPos2(Node *node, int dir) { return (&node->y)[-dir]; }
 
-void setSize1(Node *node, int dir, float width) { (&node->width)[dir] = width; }
+void setSize1(Node *node, int dir, float w) { (&node->width)[dir] = w; }
 float getSize1(Node *node, int dir) { return (&node->width)[dir]; }
 
-void setSize2(Node *node, int dir, float height) {
-  (&node->height)[-dir] = height;
-}
+void setSize2(Node *node, int dir, float h) { (&node->height)[-dir] = h; }
 float getSize2(Node *node, int dir) { return (&node->height)[-dir]; }
 
-#define createPropSetter(PropName, PropType)                                   \
-  void PropName(Node *node, int value) { node->props[PropType] = value; }
+#define createPropi(PropName, PropType)                                        \
+  void set##PropName(Node *node, int value) { node->props[PropType] = value; } \
+  int get##PropName(Node *node) { return node->props[PropType]; }
 
-createPropSetter(setAlignItems, ALIGN_ITEMS);
-createPropSetter(setFlexDirection, FLEX_DIRECTION);
-createPropSetter(setJustifyContent, JUSTIFY_CONTENT);
+#define createPropf(PropName, PropType)                                        \
+  void set##PropName(Node *node, float value) {                                \
+    node->props[PropType] = value;                                             \
+  }                                                                            \
+  float get##PropName(Node *node) { return node->props[PropType]; }
 
-#undef createPropSetter
+createPropi(AlignItems, ALIGN_ITEMS);
+createPropi(FlexDirection, FLEX_DIRECTION);
+createPropi(JustifyContent, JUSTIFY_CONTENT);
+createPropf(FlexGrow, FLEX_GROW);
+
+#undef createPropi
+#undef createPropf
 
 float calcChildOffset(int value, float size, float parentSize) {
   // don't allow overflow
@@ -229,6 +237,9 @@ void resolvePrimarySize(Node *node) {
     return;
   }
 }
+
+// Given a tree of nodes, produces the relative positions of all of them on
+// screen:
 
 // 1. dimension computing (fill in the blank widths)
 // a. calculate what each children's dimensions would be in an ideal world

@@ -4,6 +4,18 @@
 
 #include <stdio.h>
 
+Node makeDivNode(float width, float height, Node *children = NULL,
+                 int num_children = 0) {
+  static int id = 1;
+  return Node{
+    .id = id++,
+    .width = width,
+    .height = height,
+    .children = children,
+    .num_children = num_children,
+  };
+}
+
 void layoutAndPrint(Node *root) {
   layoutNodes(root, asciiMeasureText);
   printNode(root, printf);
@@ -75,7 +87,17 @@ void example2() {
   layoutAndPrint(&div);
 }
 
+void example3() {
+  Node children[] = {makeDivNode(4, 4)};
+  Node root = makeDivNode(24, 16, children, 1);
+  root.id = 0;
+
+  setFlexDirection(&root, PILATES_ROW);
+  setFlexGrow(&root.children[0], 1);
+  layoutAndPrint(&root);
+}
+
 int main() {
-  example2();
+  example3();
   return 0;
 }

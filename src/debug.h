@@ -19,18 +19,28 @@
 typedef PILATES_PRINT(PrintFunc);
 
 void printNode(Node *node, PrintFunc *printf, int indent = 0) {
-  for (int i = 0; i < indent; i++) {
-    printf(" ");
+  static char indent_str[64];
+
+  int i;
+  for (i = 0; i < indent; i++) {
+    indent_str[i] = ' ';
   }
+  indent_str[i + 1] = '\0';
 
-  if (node->type == TEXT) {
-    printf("TextNode: %s - %f %f %f %f", node->text, node->x, node->y,
-           node->width, node->height);
-  } else {
-    printf("DivNode: %f %f %f %f", node->x, node->y, node->width,
-           node->height);
+  printf("%s", indent_str);
 
-    if (node->num_children > 0) printf("\n");
+  char *name = (char *)(node->type == TEXT ? "TextNode" : "DivNode");
+
+  // print name position and size
+  printf("%s: (%.2f, %.2f, %.2f, %.2f)", name, node->x, node->y, node->width,
+         node->height);
+
+  // print flex props
+  printf("\n  %s", indent_str);
+  printf("flex-grow: %.2f;", getFlexGrow(node));
+
+  if (node->num_children > 0) {
+    printf("\n");
 
     for (int i = 0; i < node->num_children; i++) {
       printNode(&node->children[i], printf, indent + 2);
@@ -44,7 +54,8 @@ PILATES_MEASURE_TEXT(asciiMeasureText) {
 }
 
 // TODO: bounds check on all parts of the node (x, y, width, height)
-void asciiRenderNode(Node *node, char *output, char *colorOutput, int width, int height) {
+void asciiRenderNode(Node *node, char *output, char *colorOutput, int width,
+                     int height) {
   // we have the node's position
 
   if (node->type == TEXT) {
@@ -66,14 +77,16 @@ void asciiRenderNode(Node *node, char *output, char *colorOutput, int width, int
     }
 
   } else {
-    // copy width * height of the corresponding colors item to the colorOutput at index 0
+    // copy width * height of the corresponding colors item to the colorOutput
+    // at index 0
     for (int x = node->x; x < node->x + node->width; x++) {
       for (int y = node->y; y < node->y + node->height; y++) {
         colorOutput[y * width + x] = node->id;
       }
     }
 
-    ForEachChild(node, { asciiRenderNode(child, output, colorOutput, width, height); });
+    ForEachChild(
+        node, { asciiRenderNode(child, output, colorOutput, width, height); });
   }
 }
 
@@ -83,6 +96,10 @@ const char *colors[] = {
     "\033[1;42m", // green
     "\033[1;43m", // yellow
     "\033[1;44m", // blue
+    "\033[1;45m", // ??
+    "\033[1;46m", // ??
+    "\033[1;47m", // ??
+    "\033[1;48m", // ??
 };
 
 void asciiRender(Node *node) {

@@ -111,6 +111,7 @@ createPropi(AlignItems, ALIGN_ITEMS);
 createPropi(FlexDirection, FLEX_DIRECTION);
 createPropi(JustifyContent, JUSTIFY_CONTENT);
 createPropf(FlexGrow, FLEX_GROW);
+createPropi(FlexWrap, FLEX_WRAP);
 
 #undef createPropi
 #undef createPropf
@@ -235,9 +236,7 @@ void calcSecondarySizes(Node *node) {
   int d = getFlexDirection(node);
 
   if (align == PILATES_STRETCH) {
-    ForEachChild(node, {
-      setSize2(child, d, getSize2(node, d));
-    });
+    ForEachChild(node, { setSize2(child, d, getSize2(node, d)); });
 
     return;
   }
@@ -287,13 +286,42 @@ void resolveSizes(Node *node) {
   ForEachChild(node, { resolveSizes(child); });
 }
 
+void calcTotalSizeAndRows(Node *node, float &totalSize, int &totalRows,
+                          float &rowHeight) {
+  int d = getFlexDirection(node);
+  bool wrap = getFlexWrap(node);
+  float nodeWidth = getSize1(node, d);
+
+  totalSize = 0.f;
+  totalRows = 1;
+
+  float accWidth = 0;
+  float maxChildHeight = 0;
+  ForEachChild(node, {
+    totalSize += getSize1(child, d);
+    maxChildHeight = Max(maxChildHeight, getSize2(child, d));
+
+    if (wrap) {
+      accWidth += getSize1(child, d);
+      bool overflow = accWidth > nodeWidth;
+      if (overflow) {
+        accWidth = 0;
+        totalRows++;
+      }
+    }
+  });
+
+  float nodeHeight = getSize2(node, d);
+  rowHeight = Max(maxChildHeight, nodeHeight / totalRows);
+}
+
 void calcPositions(Node *node) {
-  // flex-wrap: no-wrap;
-
   int d = node->props[FLEX_DIRECTION];
+  bool wrap = getFlexWrap(node);
 
-  float totalSize = 0.f;
-  ForEachChild(node, { totalSize += getSize1(child, d); });
+  float totalSize, rowHeight;
+  int totalRows;
+  calcTotalSizeAndRows(node, totalSize, totalRows, rowHeight);
 
   float axisOffset = calcGroupOffset(node->props[JUSTIFY_CONTENT], totalSize,
                                      getSize1(node, d), node->num_children);
@@ -301,19 +329,47 @@ void calcPositions(Node *node) {
       calcChildSpacing(node->props[JUSTIFY_CONTENT], totalSize,
                        getSize1(node, d), node->num_children);
 
-  float prevPos = axisOffset;
-  ForEachChild(node, {
-    float nodeWidth = getSize1(node, d);
-    if (totalSize > nodeWidth) {
-      setSize1(child, d, getSize1(child, d) * nodeWidth / totalSize);
-    }
+  float nodeWidth = getSize1(node, d);
+  float pos = axisOffset;
 
-    setPos2(child, d,
-            calcChildOffset(node->props[ALIGN_ITEMS], getSize2(child, d),
-                            getSize2(node, d)));
-    setPos1(child, d, prevPos);
-    prevPos += getSize1(child, d) + primaryAdvance;
-  });
+  if (wrap) {
+    float accWidth = 0;
+    int rowNum = 0;
+
+    ForEachChild(node, {
+      accWidth += getSize1(child, d);
+      bool overflow = accWidth > nodeWidth;
+      if (overflow) {
+        pos = axisOffset;
+        accWidth = 0;
+        rowNum++;
+      }
+
+      setPos1(child, d, pos);
+      setPos2(child, d, rowHeight * rowNum);
+
+      if (!getSize2(child, d)) {
+        setSize2(child, d, rowHeight);
+      }
+
+      pos += getSize1(child, d) + primaryAdvance;
+    });
+  } else {
+    ForEachChild(node, {
+      bool overflow = totalSize > nodeWidth;
+
+      if (overflow) {
+        setSize1(child, d, getSize1(child, d) * nodeWidth / totalSize);
+      }
+
+      setPos2(child, d,
+              calcChildOffset(node->props[ALIGN_ITEMS], getSize2(child, d),
+                              getSize2(node, d)));
+
+      setPos1(child, d, pos);
+      pos += getSize1(child, d) + primaryAdvance;
+    });
+  }
 
   if (node->type == DIV) {
     ForEachChild(node, { calcPositions(child); });
@@ -336,13 +392,12 @@ void relativeToAbsolute(Node *node) {
 //   wrapping) b. add widths to things that don't have widths
 
 // 2. dimension resolution
-// based on width, flex-grow and flex-wrap resolve what the width of the node
-// should be
+// based on width, flex-grow and flex-wrap resolve what the width and height
+// of the node should be
+//   a. calculate heights
+//   based on text wrapping and aspect-ratio, compute the height of the elements
 
-// 3. calculate heights
-// based on text wrapping and aspect-ratio, compute the height of the elements
-
-// 4. find positions
+// 3. find positions
 // layout the nodes (giving relative positions to their parents) based on
 // spacing and wrapping
 

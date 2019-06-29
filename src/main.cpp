@@ -98,13 +98,29 @@ void example5() {
   setAlignItems(&root, PILATES_STRETCH);
 
   setFlexGrow(&parent[0], 1);
-  //setAlignItems(&parent[0], PILATES_STRETCH);
+  // setAlignItems(&parent[0], PILATES_STRETCH);
   setFlexGrow(&threecol[1], 1);
 
   layoutAndPrint(&root);
 }
 
+void example6() {
+  float w = 8;
+  float h = 8;
+  Node items[] = {makeDivNode(w, h), makeDivNode(w, h), makeDivNode(w, h),
+                  makeDivNode(w, h)};
+  Node root = makeDivNode(24, 24, items, ArrayCount(items));
+
+  setFlexWrap(&root, PILATES_WRAP);
+
+  // setFlexGrow(&parent[0], 1);
+  // setAlignItems(&parent[0], PILATES_STRETCH);
+  // setFlexGrow(&threecol[1], 1);
+
+  layoutAndPrint(&root);
+}
+
 int main() {
-  example5();
+  example6();
   return 0;
 }

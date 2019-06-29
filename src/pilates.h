@@ -230,7 +230,22 @@ void computeAutoPrimarySizes(Node *node, MeasureTextFunc *measureText) {
   }
 }
 
-void resolvePrimarySize(Node *node) {
+void calcSecondarySizes(Node *node) {
+  int align = getAlignItems(node);
+  int d = getFlexDirection(node);
+
+  if (align == PILATES_STRETCH) {
+    ForEachChild(node, {
+      setSize2(child, d, getSize2(node, d));
+    });
+
+    return;
+  }
+}
+
+void resolveSizes(Node *node) {
+  // If we're flex grow, we need to walk up the ancestor tree
+  // and find the first known width and set our width to that
   int d = getFlexDirection(node);
 
   float totalFixedSize = 0;
@@ -247,6 +262,7 @@ void resolvePrimarySize(Node *node) {
   // if the totalFixedSize is > the node.width (overflow), we need to treat
   // the child size as flex-grow
   if (totalFixedSize > getSize1(node, d)) {
+    printf("overflow: id: %d, %f\n", node->id, getSize1(node, d));
     totalFixedSize = 0;
 
     ForEachChild(node, {
@@ -265,23 +281,10 @@ void resolvePrimarySize(Node *node) {
       }
     });
   }
-}
 
-void calcSecondarySizes(Node *node) {
-  int align = getAlignItems(node);
+  calcSecondarySizes(node);
 
-  if (align == PILATES_STRETCH) {
-    int d = getFlexDirection(node);
-
-    ForEachChild(node, {
-      setSize2(child, d, getSize2(node, d));
-      calcSecondarySizes(child);
-    });
-
-    return;
-  }
-
-  ForEachChild(node, { calcSecondarySizes(child); });
+  ForEachChild(node, { resolveSizes(child); });
 }
 
 void calcPositions(Node *node) {
@@ -346,9 +349,7 @@ void relativeToAbsolute(Node *node) {
 void layoutNodes(Node *node, MeasureTextFunc *measureText) {
   computeAutoPrimarySizes(node, measureText);
 
-  resolvePrimarySize(node);
-
-  calcSecondarySizes(node);
+  resolveSizes(node);
 
   calcPositions(node);
 

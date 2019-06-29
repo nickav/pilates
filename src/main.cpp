@@ -19,7 +19,8 @@ Node makeDivNode(float width, float height, Node *children = NULL,
 void layoutAndPrint(Node *root) {
   root->id = 0;
   layoutNodes(root, asciiMeasureText);
-  printNode(root, printf);
+  printf("\n");
+  printNode(root, true, printf);
   printf("\n");
   asciiRender(root);
 }
@@ -40,7 +41,8 @@ void example1() {
 // nested children and column layout
 void example2() {
   Node childChildren[] = {makeDivNode(6, 4)};
-  Node children[] = {makeDivNode(8, 16, childChildren, ArrayCount(childChildren))};
+  Node children[] = {
+      makeDivNode(8, 16, childChildren, ArrayCount(childChildren))};
   Node root = makeDivNode(32, 32, children, ArrayCount(children));
 
   setFlexDirection(&root, PILATES_COLUMN);
@@ -68,17 +70,41 @@ void example3() {
 
 // three column layout (wip)
 void example4() {
-  Node children[] = {makeDivNode(4, 4), makeDivNode(4, 4), makeDivNode(4, 4)};
+  Node threecol[] = {makeDivNode(4, 4), makeDivNode(4, 4), makeDivNode(4, 4)};
+  Node children[] = {makeDivNode(4, 4),
+                     makeDivNode(4, 4, threecol, ArrayCount(threecol)),
+                     makeDivNode(4, 4)};
   Node root = makeDivNode(24, 16, children, ArrayCount(children));
 
   setFlexDirection(&root, PILATES_COLUMN);
   setAlignItems(&root, PILATES_STRETCH);
-  setFlexGrow(&root.children[1], 1);
+
+  setFlexGrow(&children[1], 1);
+  setAlignItems(&children[1], PILATES_STRETCH);
+
+  setFlexGrow(&threecol[1], 1);
+  setAlignItems(&threecol[1], PILATES_STRETCH);
+
+  layoutAndPrint(&root);
+}
+
+// simple 3 col layout
+void example5() {
+  Node threecol[] = {makeDivNode(4, 4), makeDivNode(4, 4), makeDivNode(4, 4)};
+  Node parent[] = {makeDivNode(4, 4, threecol, ArrayCount(threecol))};
+  Node root = makeDivNode(24, 16, parent, ArrayCount(parent));
+
+  setFlexDirection(&root, PILATES_ROW);
+  setAlignItems(&root, PILATES_STRETCH);
+
+  setFlexGrow(&parent[0], 1);
+  //setAlignItems(&parent[0], PILATES_STRETCH);
+  setFlexGrow(&threecol[1], 1);
 
   layoutAndPrint(&root);
 }
 
 int main() {
-  example4();
+  example5();
   return 0;
 }

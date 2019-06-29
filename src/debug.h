@@ -18,7 +18,7 @@
 #define PILATES_PRINT(name) int name(const char *fmt, ...);
 typedef PILATES_PRINT(PrintFunc);
 
-void printNode(Node *node, PrintFunc *printf, int indent = 0) {
+void printNode(Node *node, bool verbose, PrintFunc *printf, int indent = 0) {
   static char indent_str[64];
 
   int i;
@@ -32,17 +32,21 @@ void printNode(Node *node, PrintFunc *printf, int indent = 0) {
   char *name = (char *)(node->type == TEXT ? "TextNode" : "DivNode");
 
   // print name position and size
-  printf("%s: (%.2f, %.2f, %.2f, %.2f)", name, node->x, node->y, node->width,
-         node->height);
+  printf("%s #%d: (%.2f, %.2f, %.2f, %.2f)", name, node->id, node->x, node->y,
+         node->width, node->height);
 
   // print flex props
-  printf("\n  %s", indent_str);
-  printf("flex-grow: %.2f;", getFlexGrow(node));
-  printf("\n");
+  if (verbose) {
+    printf("\n");
+    printf("  %sflex-grow: %.2f;\n", indent_str, getFlexGrow(node));
+    printf("  %sjustify-content: %.2f;\n", indent_str, getJustifyContent(node));
+    printf("  %salign-items: %d;\n", indent_str, getAlignItems(node));
+    printf("\n");
+  }
 
   if (node->num_children > 0) {
     for (int i = 0; i < node->num_children; i++) {
-      printNode(&node->children[i], printf, indent + 2);
+      printNode(&node->children[i], verbose, printf, indent + 2);
     }
   }
 }

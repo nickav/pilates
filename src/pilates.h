@@ -35,6 +35,7 @@ typedef PILATES_MEASURE_TEXT(MeasureTextFunc);
 #define PILATES_SPACE_BETWEEN 3
 #define PILATES_SPACE_AROUND 4
 #define PILATES_SPACE_EVENLY 5
+#define PILATES_STRETCH 6
 
 // flex-wrap
 #define PILATES_NO_WRAP 0
@@ -266,7 +267,22 @@ void resolvePrimarySize(Node *node) {
   }
 }
 
-void calcSecondarySizes(Node *node) {}
+void calcSecondarySizes(Node *node) {
+  int align = getAlignItems(node);
+
+  if (align == PILATES_STRETCH) {
+    int d = getFlexDirection(node);
+
+    ForEachChild(node, {
+      setSize2(child, d, getSize2(node, d));
+      calcSecondarySizes(child);
+    });
+
+    return;
+  }
+
+  ForEachChild(node, { calcSecondarySizes(child); });
+}
 
 void calcPositions(Node *node) {
   // flex-wrap: no-wrap;

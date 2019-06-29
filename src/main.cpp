@@ -17,17 +17,18 @@ Node makeDivNode(float width, float height, Node *children = NULL,
 }
 
 void layoutAndPrint(Node *root) {
+  root->id = 0;
   layoutNodes(root, asciiMeasureText);
   printNode(root, printf);
   printf("\n");
   asciiRender(root);
 }
 
+// alignment and spacing
 void example1() {
   Node children[] = {makeDivNode(4, 4), makeDivNode(4, 4), makeDivNode(4, 4),
                      makeDivNode(4, 4)};
   Node root = makeDivNode(24, 32, children, ArrayCount(children));
-  root.id = 0;
 
   setFlexDirection(&root, PILATES_ROW);
   setJustifyContent(&root, PILATES_SPACE_BETWEEN);
@@ -36,13 +37,13 @@ void example1() {
   layoutAndPrint(&root);
 }
 
+// nested children and column layout
 void example2() {
   Node childChildren[] = {makeDivNode(6, 4)};
   Node children[] = {makeDivNode(8, 16, childChildren, ArrayCount(childChildren))};
   Node root = makeDivNode(32, 32, children, ArrayCount(children));
-  root.id = 0;
 
-  setFlexDirection(&root, PILATES_ROW);
+  setFlexDirection(&root, PILATES_COLUMN);
   setJustifyContent(&root, PILATES_ALIGN_CENTER);
   setAlignItems(&root, PILATES_ALIGN_END);
 
@@ -54,10 +55,10 @@ void example2() {
   layoutAndPrint(&root);
 }
 
+// flex-grow 1 and fixed width item
 void example3() {
   Node children[] = {makeDivNode(4, 4), makeDivNode(4, 4)};
   Node root = makeDivNode(24, 16, children, ArrayCount(children));
-  root.id = 0;
 
   setFlexDirection(&root, PILATES_ROW);
   setFlexGrow(&root.children[0], 1);
@@ -65,7 +66,19 @@ void example3() {
   layoutAndPrint(&root);
 }
 
+// three column layout (wip)
+void example4() {
+  Node children[] = {makeDivNode(4, 4), makeDivNode(4, 4), makeDivNode(4, 4)};
+  Node root = makeDivNode(24, 16, children, ArrayCount(children));
+
+  setFlexDirection(&root, PILATES_COLUMN);
+  setAlignItems(&root, PILATES_STRETCH);
+  setFlexGrow(&root.children[1], 1);
+
+  layoutAndPrint(&root);
+}
+
 int main() {
-  example3();
+  example4();
   return 0;
 }

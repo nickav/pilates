@@ -80,6 +80,26 @@ Node textNode(char *text) { return Node{.type = TEXT, .text = text}; }
 
 Node divNode() { return Node{.type = DIV}; }
 
+bool nodeBoundsEquals(Node *a, Node *b) {
+  return a == b || (a != NULL && b != NULL && a->x == b->x && a->y == b->y && a->width == b->width &&
+                    a->height == b->height);
+}
+
+bool nodeBoundsEqualsRecursive(Node *a, Node *b) {
+  if (!nodeBoundsEquals(a, b) || a->num_children != b->num_children) {
+    return false;
+  }
+
+  ForEachChild(a, {
+    Node *otherChild = &b->children[i];
+    if (!nodeBoundsEqualsRecursive(child, otherChild)) {
+      return false;
+    }
+  });
+
+  return true;
+}
+
 void setNodeSize(Node *node, int width, int height) {
   node->width = width;
   node->height = height;

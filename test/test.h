@@ -4,6 +4,7 @@
 
 #include <stdio.h>
 
+// test helpers
 Node makeDivNode(float width, float height, Node *children = NULL,
                  int num_children = 0) {
   static int id = 1;
@@ -37,15 +38,13 @@ void printAndRender(Node *root, bool verbose) {
   asciiRender(root);
 }
 
-static int tests_failed = 0;
-static int tests_run = 0;
+inline void layout(Node *root) { layoutNodes(root, asciiMeasureText); }
 
-inline bool AssertEquals(Node *result, Node *expected, char *functionName,
-                         int lineNum) {
-
+// test utilities
+inline bool AssertBoundsEqualsFn(Node *result, Node *expected,
+                                 char *functionName, int lineNum) {
   if (!(nodeBoundsEqualsRecursive(result, expected))) {
     PILATES_PRINT_FUNC("Test '%s' failed on line %d\n", functionName, lineNum);
-    tests_failed++;
     PILATES_PRINT_FUNC("\n");
     PILATES_PRINT_FUNC("Expected:\n");
     if (expected)
@@ -60,7 +59,27 @@ inline bool AssertEquals(Node *result, Node *expected, char *functionName,
   return true;
 }
 
-#define RunTest(result, expected)                                              \
-  tests_run++;                                                                 \
-  layoutNodes(result, asciiMeasureText);                                       \
-  AssertEquals(result, expected, (char *)__FUNCTION__, __LINE__);
+#define AssertEquals(result, expected)                                         \
+  if (!AssertBoundsEqualsFn(result, expected, (char *)__FUNCTION__,            \
+                            __LINE__)) {                                       \
+    return false;                                                              \
+  }
+
+#define Test(name) bool name()
+typedef Test(TestFunc);
+
+int runTests(TestFunc **tests, int &totalTests) {
+  int testsPassed = 0;
+
+  totalTests = 0;
+
+  while (tests && tests[0]) {
+    if (tests[0]()) {
+      testsPassed++;
+    }
+    tests++;
+    totalTests++;
+  }
+
+  return testsPassed;
+}

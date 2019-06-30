@@ -24,6 +24,8 @@
   void Name(int fontId, char *text, int n, float *width, float *height)
 typedef PILATES_MEASURE_TEXT(MeasureTextFunc);
 
+#define PILATES_AUTO -1
+
 // flex-direction
 #define PILATES_ROW 0
 #define PILATES_COLUMN 1
@@ -289,38 +291,40 @@ void calcSecondarySizes(Node *node) {
 void resolveSizes(Node *node) {
   int d = getFlexDirection(node);
 
-  float totalFixedSize = 0;
-  float totalWeight = 0;
-
-  ForEachChild(node, {
-    float grow = getFlexGrow(child);
-    totalWeight += grow;
-    if (grow == 0) {
-      totalFixedSize += getSize1(child, d);
-    }
-  });
-
-  // if the totalFixedSize is > the node.width (overflow), we need to treat
-  // the child size as flex-grow
-  if (totalFixedSize > getSize1(node, d)) {
-    printf("overflow: id: %d, %f\n", node->id, getSize1(node, d));
-    totalFixedSize = 0;
-
-    ForEachChild(node, {
-      float size1 = getSize1(child, d);
-      setFlexGrow(child, size1 > 0 ? size1 : 0);
-    });
-  }
-
-  if (totalWeight > 0) {
-    float size = getSize1(node, d) - totalFixedSize;
+  // handle flex-grow when flex-wrap: no-wrap
+  if (getFlexWrap(node) == PILATES_NO_WRAP) {
+    float totalFixedSize = 0;
+    float totalWeight = 0;
 
     ForEachChild(node, {
       float grow = getFlexGrow(child);
-      if (grow > 0) {
-        setSize1(child, d, size * (grow / totalWeight));
+      totalWeight += grow;
+      if (grow == 0) {
+        totalFixedSize += getSize1(child, d);
       }
     });
+
+    // if the totalFixedSize is > the node.width (overflow), we need to treat
+    // the child size as flex-grow
+    if (totalFixedSize > getSize1(node, d)) {
+      totalFixedSize = 0;
+
+      ForEachChild(node, {
+        float size1 = getSize1(child, d);
+        setFlexGrow(child, size1 > 0 ? size1 : 0);
+      });
+    }
+
+    if (totalWeight > 0) {
+      float size = getSize1(node, d) - totalFixedSize;
+
+      ForEachChild(node, {
+        float grow = getFlexGrow(child);
+        if (grow > 0) {
+          setSize1(child, d, size * (grow / totalWeight));
+        }
+      });
+    }
   }
 
   calcSecondarySizes(node);

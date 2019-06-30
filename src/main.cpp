@@ -27,15 +27,6 @@ void layoutAndPrint(Node *root) {
 
 // alignment and spacing
 void example1() {
-  Node children[] = {makeDivNode(4, 4), makeDivNode(4, 4), makeDivNode(4, 4),
-                     makeDivNode(4, 4)};
-  Node root = makeDivNode(24, 32, children, ArrayCount(children));
-
-  setFlexDirection(&root, PILATES_ROW);
-  setJustifyContent(&root, PILATES_SPACE_BETWEEN);
-  setAlignItems(&root, PILATES_ALIGN_CENTER);
-
-  layoutAndPrint(&root);
 }
 
 // nested children and column layout
@@ -113,6 +104,10 @@ void example6() {
   Node root = makeDivNode(24, 24, items, ArrayCount(items));
 
   setFlexWrap(&root, PILATES_WRAP);
+  setFlexGrow(&items[0], 1);
+  setFlexGrow(&items[1], 1);
+  setFlexGrow(&items[2], 1);
+  setFlexGrow(&items[3], 1);
 
   // setFlexGrow(&parent[0], 1);
   // setAlignItems(&parent[0], PILATES_STRETCH);

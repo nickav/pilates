@@ -42,8 +42,9 @@ void printNode(Node *node, bool verbose, PrintFunc *printf, int indent = 0) {
     printf("  %sjustify-content: %.2f;\n", indent_str, getJustifyContent(node));
     printf("  %salign-items: %d;\n", indent_str, getAlignItems(node));
     printf("  %sflex-wrap: %d;\n", indent_str, getFlexWrap(node));
-    printf("\n");
   }
+
+  printf("\n");
 
   if (node->num_children > 0) {
     for (int i = 0; i < node->num_children; i++) {

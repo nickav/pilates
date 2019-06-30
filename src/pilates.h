@@ -81,8 +81,8 @@ Node textNode(char *text) { return Node{.type = TEXT, .text = text}; }
 Node divNode() { return Node{.type = DIV}; }
 
 bool nodeBoundsEquals(Node *a, Node *b) {
-  return a == b || (a != NULL && b != NULL && a->x == b->x && a->y == b->y && a->width == b->width &&
-                    a->height == b->height);
+  return a == b || (a != NULL && b != NULL && a->x == b->x && a->y == b->y &&
+                    a->width == b->width && a->height == b->height);
 }
 
 bool nodeBoundsEqualsRecursive(Node *a, Node *b) {
@@ -247,24 +247,46 @@ void computeAutoPrimarySizes(Node *node, MeasureTextFunc *measureText) {
   }
 
   if (node->type == DIV) {
+    int d = getFlexDirection(node);
+
+    float childrenWidth = 0;
+    ForEachChild(node, {
+      computeAutoPrimarySizes(child, measureText);
+      childrenWidth += getSize1(child, d);
+    });
+
+    // calculate auto width
+    // make parent fill children (if parent doesn't have a width set)
+    if (!getSize1(node, d)) {
+      setSize1(node, d, childrenWidth);
+    }
+
     return;
   }
 }
 
 void calcSecondarySizes(Node *node) {
-  int align = getAlignItems(node);
   int d = getFlexDirection(node);
+
+  // calculate auto height
+  if (!getSize2(node, d)) {
+    float maxChildrenHeight = 0;
+    ForEachChild(node, {
+      maxChildrenHeight = Max(maxChildrenHeight, getSize2(child, d));
+    });
+
+    setSize2(node, d, maxChildrenHeight);
+  }
+
+  int align = getAlignItems(node);
 
   if (align == PILATES_STRETCH) {
     ForEachChild(node, { setSize2(child, d, getSize2(node, d)); });
-
     return;
   }
 }
 
 void resolveSizes(Node *node) {
-  // If we're flex grow, we need to walk up the ancestor tree
-  // and find the first known width and set our width to that
   int d = getFlexDirection(node);
 
   float totalFixedSize = 0;
@@ -336,20 +358,20 @@ void calcTotalSizeAndRows(Node *node, float &totalSize, int &totalRows,
 }
 
 void calcPositions(Node *node) {
-  int d = node->props[FLEX_DIRECTION];
+  int d = getFlexDirection(node);
+  int justifyContent = getJustifyContent(node);
   bool wrap = getFlexWrap(node);
 
+  float nodeWidth = getSize1(node, d);
   float totalSize, rowHeight;
   int totalRows;
   calcTotalSizeAndRows(node, totalSize, totalRows, rowHeight);
 
-  float axisOffset = calcGroupOffset(node->props[JUSTIFY_CONTENT], totalSize,
-                                     getSize1(node, d), node->num_children);
-  float primaryAdvance =
-      calcChildSpacing(node->props[JUSTIFY_CONTENT], totalSize,
-                       getSize1(node, d), node->num_children);
+  float axisOffset =
+      calcGroupOffset(justifyContent, totalSize, nodeWidth, node->num_children);
+  float primaryAdvance = calcChildSpacing(justifyContent, totalSize, nodeWidth,
+                                          node->num_children);
 
-  float nodeWidth = getSize1(node, d);
   float pos = axisOffset;
 
   if (wrap) {
@@ -375,6 +397,8 @@ void calcPositions(Node *node) {
       pos += getSize1(child, d) + primaryAdvance;
     });
   } else {
+    int alignItems = getAlignItems(node);
+
     ForEachChild(node, {
       bool overflow = totalSize > nodeWidth;
 
@@ -382,9 +406,9 @@ void calcPositions(Node *node) {
         setSize1(child, d, getSize1(child, d) * nodeWidth / totalSize);
       }
 
-      setPos2(child, d,
-              calcChildOffset(node->props[ALIGN_ITEMS], getSize2(child, d),
-                              getSize2(node, d)));
+      setPos2(
+          child, d,
+          calcChildOffset(alignItems, getSize2(child, d), getSize2(node, d)));
 
       setPos1(child, d, pos);
       pos += getSize1(child, d) + primaryAdvance;

@@ -28,34 +28,39 @@ Node mk(float x, float y, float width, float height, Node *children = NULL,
   };
 }
 
-void layoutAndPrint(Node *root) {
+void printAndRender(Node *root, bool verbose) {
+  printf("\n");
+  printNode(root, verbose, printf);
+  printf("\n");
+
   root->id = 0;
-  layoutNodes(root, asciiMeasureText);
-  printf("\n");
-  printNode(root, true, printf);
-  printf("\n");
   asciiRender(root);
 }
 
 static int tests_failed = 0;
 static int tests_run = 0;
 
-#define AssertEquals(a, b)                                                     \
-  if (!(nodeBoundsEqualsRecursive(a, b))) {                                    \
-    PILATES_PRINT_FUNC("Test '%s' failed on line %d\n", __FUNCTION__,          \
-                       __LINE__);                                              \
-    tests_failed++;                                                            \
-    PILATES_PRINT_FUNC("\n");                                                  \
-    PILATES_PRINT_FUNC("Expected:\n");                                         \
-    if (a)                                                                     \
-      layoutAndPrint(a);                                                       \
-    PILATES_PRINT_FUNC("\n\nGot:\n");                                          \
-    if (b)                                                                     \
-      layoutAndPrint(b);                                                       \
-    PILATES_PRINT_FUNC("\n");                                                  \
+inline bool AssertEquals(Node *result, Node *expected, char *functionName,
+                         int lineNum) {
+
+  if (!(nodeBoundsEqualsRecursive(result, expected))) {
+    PILATES_PRINT_FUNC("Test '%s' failed on line %d\n", functionName, lineNum);
+    tests_failed++;
+    PILATES_PRINT_FUNC("\n");
+    PILATES_PRINT_FUNC("Expected:\n");
+    if (expected)
+      printAndRender(expected, false);
+    PILATES_PRINT_FUNC("\n\nGot:\n");
+    if (result)
+      printAndRender(result, true);
+    PILATES_PRINT_FUNC("\n");
+    return false;
   }
 
-#define RunTest(a, b)                                                          \
+  return true;
+}
+
+#define RunTest(result, expected)                                              \
   tests_run++;                                                                 \
-  layoutNodes(a, asciiMeasureText);                                            \
-  AssertEquals(a, b);
+  layoutNodes(result, asciiMeasureText);                                       \
+  AssertEquals(result, expected, (char *)__FUNCTION__, __LINE__);

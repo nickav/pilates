@@ -104,8 +104,9 @@ void example5() {
   layoutAndPrint(&root);
 }
 
+// wrapping example
 void example6() {
-  float w = 8;
+  float w = 7;
   float h = 8;
   Node items[] = {makeDivNode(w, h), makeDivNode(w, h), makeDivNode(w, h),
                   makeDivNode(w, h)};

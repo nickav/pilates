@@ -49,9 +49,11 @@ inline bool AssertBoundsEqualsFn(Node *result, Node *expected,
     PILATES_PRINT_FUNC("Expected:\n");
     if (expected)
       printAndRender(expected, false);
+    else printf("NULL\n");
     PILATES_PRINT_FUNC("\n\nGot:\n");
     if (result)
       printAndRender(result, true);
+    else printf("NULL\n");
     PILATES_PRINT_FUNC("\n");
     return false;
   }

@@ -58,6 +58,20 @@ PILATES_MEASURE_TEXT(asciiMeasureText) {
   *height = 1;
 }
 
+const char *colors[] = {
+    "\033[0m",    // none
+    "\033[1;41m", // red
+    "\033[1;42m", // green
+    "\033[1;43m", // yellow
+    "\033[1;44m", // blue
+    "\033[1;45m", // magenta
+    "\033[1;46m", // cyan
+    "\033[1;47m", // white
+    "\033[1;40m", // black
+};
+
+static int colors_length = ArrayCount(colors);
+
 // TODO: bounds check on all parts of the node (x, y, width, height)
 void asciiRenderNode(Node *node, char *output, char *colorOutput, int width,
                      int height) {
@@ -86,7 +100,14 @@ void asciiRenderNode(Node *node, char *output, char *colorOutput, int width,
     // at index 0
     for (int x = node->x; x < node->x + node->width; x++) {
       for (int y = node->y; y < node->y + node->height; y++) {
-        colorOutput[y * width + x] = node->id;
+        unsigned char color = node->id;
+
+        if (color > 0) {
+          color = color % colors_length;
+          color = Max(color, 1);
+        }
+
+        colorOutput[y * width + x] = color;
       }
     }
 
@@ -94,18 +115,6 @@ void asciiRenderNode(Node *node, char *output, char *colorOutput, int width,
         node, { asciiRenderNode(child, output, colorOutput, width, height); });
   }
 }
-
-const char *colors[] = {
-    "\033[0m",    // none
-    "\033[1;41m", // red
-    "\033[1;42m", // green
-    "\033[1;43m", // yellow
-    "\033[1;44m", // blue
-    "\033[1;45m", // ??
-    "\033[1;46m", // ??
-    "\033[1;47m", // ??
-    "\033[1;48m", // ??
-};
 
 void asciiRender(Node *node) {
   int width = (int)node->width;
@@ -132,7 +141,7 @@ void asciiRender(Node *node) {
 
       char currColor = colorBuf[i];
       if (prevColor != currColor) {
-        printf("%s", colors[colorBuf[i]]);
+        printf("%s", colors[currColor]);
         prevColor = currColor;
       }
 

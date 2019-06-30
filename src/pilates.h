@@ -83,8 +83,16 @@ Node textNode(char *text) { return Node{.type = TEXT, .text = text}; }
 Node divNode() { return Node{.type = DIV}; }
 
 bool nodeBoundsEquals(Node *a, Node *b) {
-  return a == b || (a != NULL && b != NULL && a->x == b->x && a->y == b->y &&
-                    a->width == b->width && a->height == b->height);
+  if (a == b) {
+    return true;
+  }
+
+  if (a == NULL || b == NULL) {
+    return false;
+  }
+
+  return (a->x == b->x && a->y == b->y && a->width == b->width &&
+          a->height == b->height);
 }
 
 bool nodeBoundsEqualsRecursive(Node *a, Node *b) {

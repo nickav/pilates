@@ -6,7 +6,7 @@
 
 // test helpers
 Node mkdiv(float x, float y, float width, float height, Node *children,
-           int num_children) {
+           int numChildren) {
   static int id = 1;
   return Node{
       .id = id++,
@@ -15,7 +15,7 @@ Node mkdiv(float x, float y, float width, float height, Node *children,
       .width = width,
       .height = height,
       .children = children,
-      .num_children = num_children,
+      .numChildren = numChildren,
   };
 }
 
@@ -42,8 +42,8 @@ void printAndRender(Node *root, bool verbose) {
 inline void layout(Node *root) { layoutNodes(root, asciiMeasureText); }
 
 // test utilities
-inline bool AssertBoundsEqualsFn(Node *result, Node *expected,
-                                 char *functionName, int lineNum) {
+inline bool AssertNodeBoundsEquals(Node *result, Node *expected,
+                                   char *functionName, int lineNum) {
   if (!(nodeBoundsEqualsRecursive(result, expected))) {
     PILATES_PRINT_FUNC("Test '%s' failed on line %d:\n", functionName, lineNum);
     PILATES_PRINT_FUNC("\n");
@@ -64,9 +64,16 @@ inline bool AssertBoundsEqualsFn(Node *result, Node *expected,
   return true;
 }
 
-#define AssertEquals(result, expected)                                         \
-  if (!AssertBoundsEqualsFn(result, expected, (char *)__FUNCTION__,            \
-                            __LINE__)) {                                       \
+#define AssertNodeEquals(result, expected)                                     \
+  if (!AssertNodeBoundsEquals(result, expected, (char *)__FUNCTION__,          \
+                              __LINE__)) {                                     \
+    return false;                                                              \
+  }
+
+#define AssertEquals(a, b)                                                     \
+  if (a != b) {                                                                \
+    PILATES_PRINT_FUNC("Test '%s' AssertEquals failed on line %d\n",           \
+                       __FUNCTION__, __LINE__);                                \
     return false;                                                              \
   }
 

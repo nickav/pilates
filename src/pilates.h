@@ -59,21 +59,20 @@ struct Node {
   NodeType type;
   int props[PropType_COUNT];
   int id;
-  Node *parent;
 
   float x, y;
   float width, height;
 
   // div nodes
   Node *children;
-  int num_children;
+  int numChildren;
 
   // text nodes
   char *text;
 };
 
 #define ForEachChild(Parent, Body)                                             \
-  for (int i = 0; i < Parent->num_children; i++) {                             \
+  for (int i = 0; i < Parent->numChildren; i++) {                             \
     auto *child = &Parent->children[i];                                        \
     Body                                                                       \
   }
@@ -96,7 +95,7 @@ bool nodeBoundsEquals(Node *a, Node *b) {
 }
 
 bool nodeBoundsEqualsRecursive(Node *a, Node *b) {
-  if (!nodeBoundsEquals(a, b) || a->num_children != b->num_children) {
+  if (!nodeBoundsEquals(a, b) || a->numChildren != b->numChildren) {
     return false;
   }
 
@@ -222,9 +221,22 @@ int strpos(char *str, char search, int offset) {
   return -1;
 }
 
-// Currently this only supports word-wrapping mode
-int computeTextLineHeight(int fontId, MeasureTextFunc *measureText, char *text,
-                          float maxWidth) {
+int computeLetterWrapLineHeight(int fontId, MeasureTextFunc *measureText,
+                                char *text, float maxWidth) {
+  int lines = 1;
+  int n = strlen(text);
+
+  float width, height;
+  measureText(fontId, text, n, &width, &height);
+
+  float wrapf = (maxWidth / width);
+  int wrapi = wrapf;
+
+  return wrapf > wrapi ? wrapi + 1 : wrapi;
+}
+
+int computerWordWrapLineHeight(int fontId, MeasureTextFunc *measureText,
+                               char *text, float maxWidth) {
   int lines = 1;
   float lineWidth = 0;
 
@@ -380,9 +392,9 @@ void calcPositions(Node *node) {
   calcTotalSizeAndRows(node, totalSize, totalRows, rowHeight);
 
   float axisOffset =
-      calcGroupOffset(justifyContent, totalSize, nodeWidth, node->num_children);
+      calcGroupOffset(justifyContent, totalSize, nodeWidth, node->numChildren);
   float primaryAdvance = calcChildSpacing(justifyContent, totalSize, nodeWidth,
-                                          node->num_children);
+                                          node->numChildren);
 
   float pos = axisOffset;
 

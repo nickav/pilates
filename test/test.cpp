@@ -1,6 +1,5 @@
 #include "test.h"
 
-// alignment and spacing
 Test(alignmentAndSpacing) {
   Node children[] = {mkdiv(4, 4), mkdiv(4, 4), mkdiv(4, 4), mkdiv(4, 4)};
   Node root = mkdivp(0, 0, 40, 16, children);
@@ -17,7 +16,7 @@ Test(alignmentAndSpacing) {
     Node e = mkdivp(0, 0, 40, 16, ec1);
 
     layout(&root);
-    AssertEquals(&root, &e);
+    AssertNodeEquals(&root, &e);
   }
 
   // case 2:
@@ -30,7 +29,7 @@ Test(alignmentAndSpacing) {
     Node e = mkdivp(0, 0, 40, 16, ec1);
 
     layout(&root);
-    AssertEquals(&root, &e);
+    AssertNodeEquals(&root, &e);
   }
 
   // case 3:
@@ -45,7 +44,7 @@ Test(alignmentAndSpacing) {
     Node e = mkdivp(0, 0, 26, 16, ec1);
 
     layout(&root);
-    AssertEquals(&root, &e);
+    AssertNodeEquals(&root, &e);
   }
 
   return true;
@@ -71,7 +70,7 @@ Test(columnLayout) {
   Node e = mkdivp(0, 0, 32, 32, ec1);
 
   layout(&root);
-  AssertEquals(&root, &e);
+  AssertNodeEquals(&root, &e);
 
   return true;
 }
@@ -82,14 +81,26 @@ Test(flexGrow) {
 
   setFlexDirection(&root, PILATES_ROW);
   setFlexGrow(&root.children[0], 1);
-  // setFlexGrow(&root.children[1], 1);
 
-  // expected
-  Node ec1[] = {mkdiv(0, 0, 20, 4), mkdiv(20, 0, 4, 4)};
-  Node e = mkdivp(0, 0, 24, 16, ec1);
+  // case 1:
+  // one child with flex, one without
+  {
+    Node ec1[] = {mkdiv(0, 0, 20, 4), mkdiv(20, 0, 4, 4)};
+    Node e = mkdivp(0, 0, 24, 16, ec1);
+    layout(&root);
+    AssertNodeEquals(&root, &e);
+  }
 
-  layout(&root);
-  AssertEquals(&root, &e);
+  // case 2:
+  // both children with flex
+  {
+    setFlexGrow(&root.children[1], 1);
+
+    Node ec1[] = {mkdiv(0, 0, 12, 4), mkdiv(12, 0, 12, 4)};
+    Node e = mkdivp(0, 0, 24, 16, ec1);
+    layout(&root);
+    AssertNodeEquals(&root, &e);
+  }
 
   return true;
 }
@@ -109,12 +120,11 @@ Test(threeColumnLayout) {
   Node e = mkdivp(0, 0, 24, 16, ec1);
 
   layout(&root);
-  AssertEquals(&root, &e);
+  AssertNodeEquals(&root, &e);
 
   return true;
 }
 
-// simple 3 col layout
 Test(simpleThreeCol) {
   Node threecol[] = {mkdiv(4, 4), mkdiv(4, 4), mkdiv(4, 4)};
   Node parent[] = {mkdivp(0, 0, 4, 4, threecol)};
@@ -132,12 +142,11 @@ Test(simpleThreeCol) {
   Node e = mkdiv(0, 0, 24, 16, ec1, ArrayCount(ec1));
 
   layout(&root);
-  AssertEquals(&root, &e);
+  AssertNodeEquals(&root, &e);
 
   return true;
 }
 
-// wrapping example
 Test(flexWrap) {
   float w = 7;
   float h = 8;
@@ -145,17 +154,12 @@ Test(flexWrap) {
   Node root = mkdivp(0, 0, 24, 24, items);
 
   setFlexWrap(&root, PILATES_WRAP);
-  setFlexGrow(&items[0], 1);
-  setFlexGrow(&items[1], 1);
-  setFlexGrow(&items[2], 1);
-  setFlexGrow(&items[3], 1);
-
   Node ec1[] = {mkdiv(0, 0, w, h), mkdiv(7, 0, w, h), mkdiv(14, 0, w, h),
                 mkdiv(0, 12, w, h)};
   Node e = mkdiv(0, 0, 24, 24, ec1, ArrayCount(ec1));
 
   layout(&root);
-  AssertEquals(&root, &e);
+  AssertNodeEquals(&root, &e);
 
   return true;
 }
@@ -168,7 +172,31 @@ Test(parentHeightFromChildren) {
   Node e = mkdivp(0, 0, 8, 8, ec1);
 
   layout(&root);
-  AssertEquals(&root, &e);
+  AssertNodeEquals(&root, &e);
+
+  return true;
+}
+
+Test(multiPass) {
+  Node items[] = {mkdiv(4, 4)};
+  Node root = mkdivp(0, 0, 16, 16, items);
+
+  // first pass:
+  setFlexGrow(&items[0], 1);
+  setFlexDirection(&root, PILATES_ROW);
+  layout(&root);
+
+  AssertEquals(items[0].width, 16);
+  AssertEquals(items[0].height, 4);
+
+  // second pass:
+  items[0].width = 4;
+  items[0].height = 4;
+  setFlexDirection(&root, PILATES_COLUMN);
+  layout(&root);
+
+  AssertEquals(items[0].width, 4);
+  AssertEquals(items[0].height, 16);
 
   return true;
 }
@@ -180,6 +208,7 @@ TestFunc *tests[] = {alignmentAndSpacing,
                      simpleThreeCol,
                      flexGrow,
                      flexWrap,
+                     multiPass,
                      NULL};
 
 int main() {

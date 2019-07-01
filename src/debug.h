@@ -46,8 +46,8 @@ void printNode(Node *node, bool verbose, PrintFunc *printf, int indent = 0) {
 
   printf("\n");
 
-  if (node->num_children > 0) {
-    for (int i = 0; i < node->num_children; i++) {
+  if (node->numChildren > 0) {
+    for (int i = 0; i < node->numChildren; i++) {
       printNode(&node->children[i], verbose, printf, indent + 2);
     }
   }

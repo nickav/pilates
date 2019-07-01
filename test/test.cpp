@@ -2,9 +2,8 @@
 
 // alignment and spacing
 Test(alignmentAndSpacing) {
-  Node children[] = {makeDivNode(4, 4), makeDivNode(4, 4), makeDivNode(4, 4),
-                     makeDivNode(4, 4)};
-  Node root = makeDivNode(40, 16, children, ArrayCount(children));
+  Node children[] = {mkdiv(4, 4), mkdiv(4, 4), mkdiv(4, 4), mkdiv(4, 4)};
+  Node root = mkdivp(0, 0, 40, 16, children);
 
   setFlexDirection(&root, PILATES_ROW);
 
@@ -13,9 +12,9 @@ Test(alignmentAndSpacing) {
     setJustifyContent(&root, PILATES_SPACE_BETWEEN);
     setAlignItems(&root, PILATES_ALIGN_CENTER);
 
-    Node ec1[] = {mk(0, 6, 4, 4), mk(12, 6, 4, 4), mk(24, 6, 4, 4),
-                  mk(36, 6, 4, 4)};
-    Node e = mk(0, 0, 40, 16, ec1, ArrayCount(ec1));
+    Node ec1[] = {mkdiv(0, 6, 4, 4), mkdiv(12, 6, 4, 4), mkdiv(24, 6, 4, 4),
+                  mkdiv(36, 6, 4, 4)};
+    Node e = mkdivp(0, 0, 40, 16, ec1);
 
     layout(&root);
     AssertEquals(&root, &e);
@@ -26,9 +25,9 @@ Test(alignmentAndSpacing) {
     setJustifyContent(&root, PILATES_SPACE_AROUND);
     setAlignItems(&root, PILATES_ALIGN_START);
 
-    Node ec1[] = {mk(3, 0, 4, 4), mk(13, 0, 4, 4), mk(23, 0, 4, 4),
-                  mk(33, 0, 4, 4)};
-    Node e = mk(0, 0, 40, 16, ec1, ArrayCount(ec1));
+    Node ec1[] = {mkdiv(3, 0, 4, 4), mkdiv(13, 0, 4, 4), mkdiv(23, 0, 4, 4),
+                  mkdiv(33, 0, 4, 4)};
+    Node e = mkdivp(0, 0, 40, 16, ec1);
 
     layout(&root);
     AssertEquals(&root, &e);
@@ -36,26 +35,26 @@ Test(alignmentAndSpacing) {
 
   // case 3:
   {
+    // TODO: fix floating point comparisons
+    root.width = 26;
     setJustifyContent(&root, PILATES_SPACE_EVENLY);
     setAlignItems(&root, PILATES_ALIGN_END);
 
-    Node ec1[] = {mk(4.8, 12, 4, 4), mk(13.6, 12, 4, 4), mk(22.4, 12, 4, 4),
-                  mk(31.2, 12, 4, 4)};
-    Node e = mk(0, 0, 40, 16, ec1, ArrayCount(ec1));
+    Node ec1[] = {mkdiv(2, 12, 4, 4), mkdiv(8, 12, 4, 4), mkdiv(14, 12, 4, 4),
+                  mkdiv(20, 12, 4, 4)};
+    Node e = mkdivp(0, 0, 26, 16, ec1);
 
     layout(&root);
-    // TODO: fix floating point comparisons
-    // AssertEquals(&root, &e);
+    AssertEquals(&root, &e);
   }
 
   return true;
 }
 
 Test(columnLayout) {
-  Node childChildren[] = {makeDivNode(6, 4)};
-  Node children[] = {
-      makeDivNode(8, 16, childChildren, ArrayCount(childChildren))};
-  Node root = makeDivNode(32, 32, children, ArrayCount(children));
+  Node childChildren[] = {mkdiv(6, 4)};
+  Node children[] = {mkdivp(0, 0, 8, 16, childChildren)};
+  Node root = mkdivp(0, 0, 32, 32, children);
 
   setFlexDirection(&root, PILATES_COLUMN);
   setJustifyContent(&root, PILATES_ALIGN_CENTER);
@@ -67,9 +66,9 @@ Test(columnLayout) {
   setAlignItems(div1, PILATES_ALIGN_END);
 
   // expected
-  Node ec2[] = {mk(25, 20, 6, 4)};
-  Node ec1[] = {mk(24, 8, 8, 16, ec2, ArrayCount(ec2))};
-  Node e = mk(0, 0, 32, 32, ec1, ArrayCount(ec1));
+  Node ec2[] = {mkdiv(25, 20, 6, 4)};
+  Node ec1[] = {mkdivp(24, 8, 8, 16, ec2)};
+  Node e = mkdivp(0, 0, 32, 32, ec1);
 
   layout(&root);
   AssertEquals(&root, &e);
@@ -78,28 +77,27 @@ Test(columnLayout) {
 }
 
 Test(flexGrow) {
-  Node children[] = {makeDivNode(4, 4), makeDivNode(4, 4)};
-  Node root = makeDivNode(24, 16, children, ArrayCount(children));
+  Node children[] = {mkdiv(4, 4), mkdiv(4, 4)};
+  Node root = mkdivp(0, 0, 24, 16, children);
 
   setFlexDirection(&root, PILATES_ROW);
   setFlexGrow(&root.children[0], 1);
   // setFlexGrow(&root.children[1], 1);
 
   // expected
-  Node ec2[] = {mk(0, 0, 4, 4), mk(4, 0, 16, 4), mk(20, 0, 4, 4)};
-  Node ec1[] = {mk(0, 0, 24, 16, ec2, ArrayCount(ec2))};
-  Node e = mk(0, 0, 24, 16, ec1, ArrayCount(ec1));
+  Node ec1[] = {mkdiv(0, 0, 20, 4), mkdiv(20, 0, 4, 4)};
+  Node e = mkdivp(0, 0, 24, 16, ec1);
 
   layout(&root);
-  //AssertEquals(&root, &e);
+  AssertEquals(&root, &e);
 
   return true;
 }
 
 Test(threeColumnLayout) {
-  Node threecol[] = {makeDivNode(4, 4), makeDivNode(4, 4), makeDivNode(4, 4)};
+  Node threecol[] = {mkdiv(4, 4), mkdiv(4, 4), mkdiv(4, 4)};
 
-  Node root = makeDivNode(24, 16, threecol, ArrayCount(threecol));
+  Node root = mkdivp(0, 0, 24, 16, threecol);
 
   setFlexDirection(&root, PILATES_ROW);
   setAlignItems(&root, PILATES_STRETCH);
@@ -107,8 +105,8 @@ Test(threeColumnLayout) {
   setFlexGrow(&threecol[1], 1);
   setAlignItems(&threecol[1], PILATES_STRETCH);
 
-  Node ec1[] = {mk(0, 0, 4, 16), mk(4, 0, 16, 16), mk(20, 0, 4, 16)};
-  Node e = mk(0, 0, 24, 16, ec1, ArrayCount(ec1));
+  Node ec1[] = {mkdiv(0, 0, 4, 16), mkdiv(4, 0, 16, 16), mkdiv(20, 0, 4, 16)};
+  Node e = mkdivp(0, 0, 24, 16, ec1);
 
   layout(&root);
   AssertEquals(&root, &e);
@@ -118,9 +116,9 @@ Test(threeColumnLayout) {
 
 // simple 3 col layout
 Test(simpleThreeCol) {
-  Node threecol[] = {makeDivNode(4, 4), makeDivNode(4, 4), makeDivNode(4, 4)};
-  Node parent[] = {makeDivNode(4, 4, threecol, ArrayCount(threecol))};
-  Node root = makeDivNode(24, 16, parent, ArrayCount(parent));
+  Node threecol[] = {mkdiv(4, 4), mkdiv(4, 4), mkdiv(4, 4)};
+  Node parent[] = {mkdivp(0, 0, 4, 4, threecol)};
+  Node root = mkdivp(0, 0, 24, 16, parent);
 
   setFlexDirection(&root, PILATES_ROW);
   setAlignItems(&root, PILATES_STRETCH);
@@ -129,9 +127,9 @@ Test(simpleThreeCol) {
   // setAlignItems(&parent[0], PILATES_STRETCH);
   setFlexGrow(&threecol[1], 1);
 
-  Node ec2[] = {mk(0, 0, 4, 4), mk(4, 0, 16, 4), mk(20, 0, 4, 4)};
-  Node ec1[] = {mk(0, 0, 24, 16, ec2, ArrayCount(ec2))};
-  Node e = mk(0, 0, 24, 16, ec1, ArrayCount(ec1));
+  Node ec2[] = {mkdiv(0, 0, 4, 4), mkdiv(4, 0, 16, 4), mkdiv(20, 0, 4, 4)};
+  Node ec1[] = {mkdiv(0, 0, 24, 16, ec2, ArrayCount(ec2))};
+  Node e = mkdiv(0, 0, 24, 16, ec1, ArrayCount(ec1));
 
   layout(&root);
   AssertEquals(&root, &e);
@@ -143,9 +141,8 @@ Test(simpleThreeCol) {
 Test(flexWrap) {
   float w = 7;
   float h = 8;
-  Node items[] = {makeDivNode(w, h), makeDivNode(w, h), makeDivNode(w, h),
-                  makeDivNode(w, h)};
-  Node root = makeDivNode(24, 24, items, ArrayCount(items));
+  Node items[] = {mkdiv(w, h), mkdiv(w, h), mkdiv(w, h), mkdiv(w, h)};
+  Node root = mkdivp(0, 0, 24, 24, items);
 
   setFlexWrap(&root, PILATES_WRAP);
   setFlexGrow(&items[0], 1);
@@ -153,8 +150,9 @@ Test(flexWrap) {
   setFlexGrow(&items[2], 1);
   setFlexGrow(&items[3], 1);
 
-  Node ec1[] = {mk(0, 0, w, h), mk(7, 0, w, h), mk(14, 0, w, h), mk(0, 12, w, h)};
-  Node e = mk(0, 0, 24, 24, ec1, ArrayCount(ec1));
+  Node ec1[] = {mkdiv(0, 0, w, h), mkdiv(7, 0, w, h), mkdiv(14, 0, w, h),
+                mkdiv(0, 12, w, h)};
+  Node e = mkdiv(0, 0, 24, 24, ec1, ArrayCount(ec1));
 
   layout(&root);
   AssertEquals(&root, &e);
@@ -163,15 +161,14 @@ Test(flexWrap) {
 }
 
 Test(parentHeightFromChildren) {
-  Node items[] = {makeDivNode(8, 8)};
-  Node root = makeDivNode(0, 0, items, ArrayCount(items));
+  Node items[] = {mkdiv(8, 8)};
+  Node root = mkdivp(0, 0, 0, 0, items);
 
-  Node expectedChildren[] = {mk(0, 0, 8, 8)};
-  Node expected =
-      mk(0, 0, 8, 8, expectedChildren, ArrayCount(expectedChildren));
+  Node ec1[] = {mkdiv(0, 0, 8, 8)};
+  Node e = mkdivp(0, 0, 8, 8, ec1);
 
   layout(&root);
-  AssertEquals(&root, &expected);
+  AssertEquals(&root, &e);
 
   return true;
 }
@@ -191,7 +188,7 @@ int main() {
   int numFailed = totalTests - numPassed;
 
   if (numPassed == totalTests) {
-    printf("\nAll test(s) passed! 🧘\n");
+    printf("\nAll %d test(s) passed! 🧘\n", numPassed);
   } else {
     printf("\n%d test(s) failed!\n", numFailed);
   }

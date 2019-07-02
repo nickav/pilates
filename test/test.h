@@ -4,6 +4,35 @@
 
 #include <stdio.h>
 
+bool nodeBoundsEquals(Node *a, Node *b) {
+  if (a == b) {
+    return true;
+  }
+
+  if (a == NULL || b == NULL) {
+    return false;
+  }
+
+  return (a->x == b->x && a->y == b->y && a->width == b->width &&
+          a->height == b->height);
+}
+
+bool nodeBoundsEqualsRecursive(Node *a, Node *b) {
+  if (!nodeBoundsEquals(a, b) || a->numChildren != b->numChildren) {
+    return false;
+  }
+
+  ForEachChild(a, {
+    Node *otherChild = &b->children[i];
+    if (!nodeBoundsEqualsRecursive(child, otherChild)) {
+      return false;
+    }
+  });
+
+  return true;
+}
+
+
 // test helpers
 Node mkdiv(float x, float y, float width, float height, Node *children,
            int numChildren) {
@@ -45,19 +74,19 @@ inline void layout(Node *root) { layoutNodes(root, asciiMeasureText); }
 inline bool AssertNodeBoundsEquals(Node *result, Node *expected,
                                    char *functionName, int lineNum) {
   if (!(nodeBoundsEqualsRecursive(result, expected))) {
-    PILATES_PRINT_FUNC("Test '%s' failed on line %d:\n", functionName, lineNum);
-    PILATES_PRINT_FUNC("\n");
-    PILATES_PRINT_FUNC("Expected:\n");
+    printf("Test '%s' failed on line %d:\n", functionName, lineNum);
+    printf("\n");
+    printf("Expected:\n");
     if (expected)
       printAndRender(expected, false);
     else
       printf("NULL\n");
-    PILATES_PRINT_FUNC("\n\nGot:\n");
+    printf("\n\nGot:\n");
     if (result)
       printAndRender(result, true);
     else
       printf("NULL\n");
-    PILATES_PRINT_FUNC("\n");
+    printf("\n");
     return false;
   }
 
@@ -72,7 +101,7 @@ inline bool AssertNodeBoundsEquals(Node *result, Node *expected,
 
 #define AssertEquals(a, b)                                                     \
   if (a != b) {                                                                \
-    PILATES_PRINT_FUNC("Test '%s' AssertEquals failed on line %d\n",           \
+    printf("Test '%s' AssertEquals failed on line %d\n",           \
                        __FUNCTION__, __LINE__);                                \
     return false;                                                              \
   }

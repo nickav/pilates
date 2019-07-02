@@ -2,18 +2,7 @@
 
 #include <stdlib.h>
 #include <string.h>
-
-#ifndef PILATES_PRINT_FUNC
 #include <stdio.h>
-#define PILATES_PRINT_FUNC printf
-#endif
-
-#define Assert(expr)                                                           \
-  if (!(expr)) {                                                               \
-    PILATES_PRINT_FUNC("Assert failed in function '%s' on line: %d\n",         \
-                       __FUNCTION__, __LINE__);                                \
-    *(volatile int *)0 = 0;                                                    \
-  }
 
 #define PILATES_PRINT(name) int name(const char *fmt, ...);
 typedef PILATES_PRINT(PrintFunc);

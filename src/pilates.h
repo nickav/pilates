@@ -9,8 +9,22 @@
 // We want to calculate the pixel positions (upper left offset) and height/width
 // Padding and margin
 
+#ifdef PILATES_DEBUG
 #include <stdio.h>
-#include <string.h>
+
+#define Assert(expr)                                                           \
+  if (!(expr)) {                                                               \
+    printf("Assert failed in function '%s' on line: %d\n", __FUNCTION__,       \
+           __LINE__);                                                          \
+    *(volatile int *)0 = 0;                                                    \
+  }
+#else
+
+#define Assert(expr)
+
+#define printf(...)
+
+#endif
 
 // Built-in Macros
 #define Max(a, b) (a > b ? a : b)
@@ -72,7 +86,7 @@ struct Node {
 };
 
 #define ForEachChild(Parent, Body)                                             \
-  for (int i = 0; i < Parent->numChildren; i++) {                             \
+  for (int i = 0; i < Parent->numChildren; i++) {                              \
     auto *child = &Parent->children[i];                                        \
     Body                                                                       \
   }
@@ -80,34 +94,6 @@ struct Node {
 Node textNode(char *text) { return Node{.type = TEXT, .text = text}; }
 
 Node divNode() { return Node{.type = DIV}; }
-
-bool nodeBoundsEquals(Node *a, Node *b) {
-  if (a == b) {
-    return true;
-  }
-
-  if (a == NULL || b == NULL) {
-    return false;
-  }
-
-  return (a->x == b->x && a->y == b->y && a->width == b->width &&
-          a->height == b->height);
-}
-
-bool nodeBoundsEqualsRecursive(Node *a, Node *b) {
-  if (!nodeBoundsEquals(a, b) || a->numChildren != b->numChildren) {
-    return false;
-  }
-
-  ForEachChild(a, {
-    Node *otherChild = &b->children[i];
-    if (!nodeBoundsEqualsRecursive(child, otherChild)) {
-      return false;
-    }
-  });
-
-  return true;
-}
 
 void setNodeSize(Node *node, int width, int height) {
   node->width = width;
@@ -211,6 +197,13 @@ float calcChildSpacing(int value, float size, float parentSize, int n) {
   }
 }
 
+int strlen(char *str) {
+  char *s;
+  for (s = str; *s; s++)
+    ;
+  return (s - str);
+}
+
 int strpos(char *str, char search, int offset) {
   for (int i = offset; i < strlen(str); i++) {
     if (str[i] == search) {
@@ -308,43 +301,64 @@ void calcSecondarySizes(Node *node) {
   }
 }
 
-void resolveSizes(Node *node) {
+void resolveFlexGrow(Node *node, int offset, int n) {
+  Assert(n <= node->numChildren);
+  Assert(offset <= n);
+
   int d = getFlexDirection(node);
 
-  // handle flex-grow when flex-wrap: no-wrap
-  if (getFlexWrap(node) == PILATES_NO_WRAP) {
-    float totalFixedSize = 0;
-    float totalWeight = 0;
+  float totalFixedSize = 0;
+  float totalWeight = 0;
 
-    ForEachChild(node, {
+  // calc total flex grow weight
+  for (int i = offset; i < n; i++) {
+    Node *child = &node->children[i];
+
+    float grow = getFlexGrow(child);
+    totalWeight += grow;
+    if (grow == 0) {
+      totalFixedSize += getSize1(child, d);
+    }
+  }
+
+  // if the totalFixedSize is > the node.width (overflow), we need to treat
+  // the child size as flex-grow
+  float nodeSize1 = getSize1(node, d);
+  if (totalFixedSize > nodeSize1) {
+    totalFixedSize = 0;
+    totalWeight = 0;
+
+    for (int i = offset; i < n; i++) {
+      Node *child = &node->children[i];
+      float size1 = getSize1(child, d);
+      setFlexGrow(child, size1);
+      totalWeight += size1;
+    }
+  }
+
+  // we're using flex grow
+  if (totalWeight > 0) {
+    float size = nodeSize1 - totalFixedSize;
+    float pos = 0;
+
+    for (int i = offset; i < n; i++) {
+      Node *child = &node->children[i];
       float grow = getFlexGrow(child);
-      totalWeight += grow;
-      if (grow == 0) {
-        totalFixedSize += getSize1(child, d);
+
+      if (grow > 0) {
+        setSize1(child, d, size * (grow / totalWeight));
       }
-    });
 
-    // if the totalFixedSize is > the node.width (overflow), we need to treat
-    // the child size as flex-grow
-    if (totalFixedSize > getSize1(node, d)) {
-      totalFixedSize = 0;
+      setPos1(child, d, pos);
 
-      ForEachChild(node, {
-        float size1 = getSize1(child, d);
-        setFlexGrow(child, size1 > 0 ? size1 : 0);
-      });
+      pos += getSize1(child, d);
     }
+  }
+}
 
-    if (totalWeight > 0) {
-      float size = getSize1(node, d) - totalFixedSize;
-
-      ForEachChild(node, {
-        float grow = getFlexGrow(child);
-        if (grow > 0) {
-          setSize1(child, d, size * (grow / totalWeight));
-        }
-      });
-    }
+void resolveSizes(Node *node) {
+  if (getFlexWrap(node) == PILATES_NO_WRAP) {
+    resolveFlexGrow(node, 0, node->numChildren);
   }
 
   calcSecondarySizes(node);
@@ -384,7 +398,6 @@ void calcTotalSizeAndRows(Node *node, float &totalSize, int &totalRows,
 void calcPositions(Node *node) {
   int d = getFlexDirection(node);
   int justifyContent = getJustifyContent(node);
-  bool wrap = getFlexWrap(node);
 
   float nodeWidth = getSize1(node, d);
   float totalSize, rowHeight;
@@ -393,14 +406,16 @@ void calcPositions(Node *node) {
 
   float axisOffset =
       calcGroupOffset(justifyContent, totalSize, nodeWidth, node->numChildren);
-  float primaryAdvance = calcChildSpacing(justifyContent, totalSize, nodeWidth,
-                                          node->numChildren);
+  float primaryAdvance =
+      calcChildSpacing(justifyContent, totalSize, nodeWidth, node->numChildren);
 
-  float pos = axisOffset;
-
+  bool wrap = getFlexWrap(node);
   if (wrap) {
+    float rowWidth = 0;
     float accWidth = 0;
-    int rowNum = 0;
+    int rowStartIndex = 0;
+    int row = 0;
+    float pos = axisOffset;
 
     ForEachChild(node, {
       accWidth += getSize1(child, d);
@@ -408,11 +423,13 @@ void calcPositions(Node *node) {
       if (overflow) {
         pos = axisOffset;
         accWidth = 0;
-        rowNum++;
+        row++;
+        resolveFlexGrow(node, rowStartIndex, rowStartIndex + i);
+        rowStartIndex = i;
       }
 
       setPos1(child, d, pos);
-      setPos2(child, d, rowHeight * rowNum);
+      setPos2(child, d, rowHeight * row);
 
       if (!getSize2(child, d)) {
         setSize2(child, d, rowHeight);
@@ -420,8 +437,13 @@ void calcPositions(Node *node) {
 
       pos += getSize1(child, d) + primaryAdvance;
     });
+
+    if (row < totalRows) {
+      resolveFlexGrow(node, rowStartIndex, node->numChildren);
+    }
   } else {
     int alignItems = getAlignItems(node);
+    float pos = axisOffset;
 
     ForEachChild(node, {
       bool overflow = totalSize > nodeWidth;
@@ -468,7 +490,6 @@ void relativeToAbsolute(Node *node) {
 // 3. find positions
 // layout the nodes (giving relative positions to their parents) based on
 // spacing and wrapping
-
 void layoutNodes(Node *node, MeasureTextFunc *measureText) {
   computeAutoPrimarySizes(node, measureText);
 

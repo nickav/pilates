@@ -138,8 +138,8 @@ Test(simpleThreeCol) {
   setFlexGrow(&threecol[1], 1);
 
   Node ec2[] = {mkdiv(0, 0, 4, 4), mkdiv(4, 0, 16, 4), mkdiv(20, 0, 4, 4)};
-  Node ec1[] = {mkdiv(0, 0, 24, 16, ec2, ArrayCount(ec2))};
-  Node e = mkdiv(0, 0, 24, 16, ec1, ArrayCount(ec1));
+  Node ec1[] = {mkdivp(0, 0, 24, 16, ec2)};
+  Node e = mkdivp(0, 0, 24, 16, ec1);
 
   layout(&root);
   AssertNodeEquals(&root, &e);
@@ -154,12 +154,29 @@ Test(flexWrap) {
   Node root = mkdivp(0, 0, 24, 24, items);
 
   setFlexWrap(&root, PILATES_WRAP);
-  Node ec1[] = {mkdiv(0, 0, w, h), mkdiv(7, 0, w, h), mkdiv(14, 0, w, h),
-                mkdiv(0, 12, w, h)};
-  Node e = mkdiv(0, 0, 24, 24, ec1, ArrayCount(ec1));
 
-  layout(&root);
-  AssertNodeEquals(&root, &e);
+  // normal wrapping
+  {
+    Node ec1[] = {mkdiv(0, 0, w, h), mkdiv(7, 0, w, h), mkdiv(14, 0, w, h),
+                  mkdiv(0, 12, w, h)};
+    Node e = mkdivp(0, 0, 24, 24, ec1);
+    layout(&root);
+    AssertNodeEquals(&root, &e);
+  }
+
+  // wrap with grow
+  {
+    Node ec1[] = {mkdiv(0, 0, 8, h), mkdiv(8, 0, 8, h), mkdiv(16, 0, 8, h),
+                  mkdiv(0, 12, 24, h)};
+    Node e = mkdivp(0, 0, 24, 24, ec1);
+
+    for (int i = 0; i < ArrayCount(items); i++) {
+      setFlexGrow(&items[i], 1);
+    }
+
+    layout(&root);
+    AssertNodeEquals(&root, &e);
+  }
 
   return true;
 }
@@ -222,5 +239,5 @@ int main() {
     printf("\n%d test(s) failed!\n", numFailed);
   }
 
-  return numFailed > 0;
+  return numFailed;
 }

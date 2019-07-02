@@ -22,12 +22,12 @@ bool nodeBoundsEqualsRecursive(Node *a, Node *b) {
     return false;
   }
 
-  ForEachChild(a, {
+  ForEachChild(a) {
     Node *otherChild = &b->children[i];
     if (!nodeBoundsEqualsRecursive(child, otherChild)) {
       return false;
     }
-  });
+  }
 
   return true;
 }

@@ -89,11 +89,9 @@ typedef struct Node {
   char *text;
 } Node;
 
-#define ForEachChild(Parent, Body)                                             \
-  for (int i = 0; i < Parent->numChildren; i++) {                              \
-    Node *child = &Parent->children[i];                                        \
-    Body                                                                       \
-  }
+#define ForEachChild(Parent)                                                   \
+  for (int i = 0; i < Parent->numChildren; i++)                                \
+    for (Node *child = &Parent->children[i]; child; child = NULL)
 
 Node textNode(char *text) { return (Node){.type = TEXT, .text = text}; }
 
@@ -220,11 +218,8 @@ int strPos(char *str, char search, int offset) {
 
 int computeLetterWrapLineHeight(int fontId, MeasureTextFunc *measureText,
                                 char *text, float maxWidth) {
-  int lines = 1;
-  int n = strLength(text);
-
   float width, height;
-  measureText(fontId, text, n, &width, &height);
+  measureText(fontId, text, 0, &width, &height);
 
   float wrapf = (maxWidth / width);
   int wrapi = wrapf;
@@ -269,10 +264,10 @@ void computeAutoPrimarySizes(Node *node, MeasureTextFunc *measureText) {
     int d = getFlexDirection(node);
 
     float childrenWidth = 0;
-    ForEachChild(node, {
+    ForEachChild(node) {
       computeAutoPrimarySizes(child, measureText);
       childrenWidth += getSize1(child, d);
-    });
+    }
 
     // calculate auto width
     // make parent fill children (if parent doesn't have a width set)
@@ -290,9 +285,9 @@ void calcSecondarySizes(Node *node) {
   // calculate auto height
   if (!getSize2(node, d)) {
     float maxChildrenHeight = 0;
-    ForEachChild(node, {
+    ForEachChild(node) {
       maxChildrenHeight = Max(maxChildrenHeight, getSize2(child, d));
-    });
+    }
 
     setSize2(node, d, maxChildrenHeight);
   }
@@ -300,7 +295,7 @@ void calcSecondarySizes(Node *node) {
   int align = getAlignItems(node);
 
   if (align == PILATES_STRETCH) {
-    ForEachChild(node, { setSize2(child, d, getSize2(node, d)); });
+    ForEachChild(node) { setSize2(child, d, getSize2(node, d)); }
     return;
   }
 }
@@ -367,7 +362,7 @@ void resolveSizes(Node *node) {
 
   calcSecondarySizes(node);
 
-  ForEachChild(node, { resolveSizes(child); });
+  ForEachChild(node) resolveSizes(child);
 }
 
 void calcTotalSizeAndRows(Node *node, float *totalSize, int *totalRows,
@@ -381,7 +376,7 @@ void calcTotalSizeAndRows(Node *node, float *totalSize, int *totalRows,
 
   float accWidth = 0;
   float maxChildHeight = 0;
-  ForEachChild(node, {
+  ForEachChild(node) {
     outSize += getSize1(child, d);
     maxChildHeight = Max(maxChildHeight, getSize2(child, d));
 
@@ -390,10 +385,10 @@ void calcTotalSizeAndRows(Node *node, float *totalSize, int *totalRows,
       bool overflow = accWidth > nodeWidth;
       if (overflow) {
         accWidth = 0;
-        outRows ++;
+        outRows++;
       }
     }
-  });
+  }
 
   float nodeHeight = getSize2(node, d);
   *totalSize = outSize;
@@ -423,7 +418,7 @@ void calcPositions(Node *node) {
     int row = 0;
     float pos = axisOffset;
 
-    ForEachChild(node, {
+    ForEachChild(node) {
       accWidth += getSize1(child, d);
       bool overflow = accWidth > nodeWidth;
       if (overflow) {
@@ -442,7 +437,7 @@ void calcPositions(Node *node) {
       }
 
       pos += getSize1(child, d) + primaryAdvance;
-    });
+    }
 
     if (row < totalRows) {
       resolveFlexGrow(node, rowStartIndex, node->numChildren);
@@ -451,7 +446,7 @@ void calcPositions(Node *node) {
     int alignItems = getAlignItems(node);
     float pos = axisOffset;
 
-    ForEachChild(node, {
+    ForEachChild(node) {
       bool overflow = totalSize > nodeWidth;
 
       if (overflow) {
@@ -464,20 +459,20 @@ void calcPositions(Node *node) {
 
       setPos1(child, d, pos);
       pos += getSize1(child, d) + primaryAdvance;
-    });
+    }
   }
 
   if (node->type == DIV) {
-    ForEachChild(node, { calcPositions(child); });
+    ForEachChild(node) calcPositions(child);
   }
 }
 
 void relativeToAbsolute(Node *node) {
-  ForEachChild(node, {
+  ForEachChild(node) {
     child->x += node->x;
     child->y += node->y;
     relativeToAbsolute(child);
-  });
+  }
 }
 
 // Given a tree of nodes, produces the relative positions of all of them on
@@ -497,6 +492,7 @@ void relativeToAbsolute(Node *node) {
 // layout the nodes (giving relative positions to their parents) based on
 // spacing and wrapping
 void layoutNodes(Node *node, MeasureTextFunc *measureText) {
+
   computeAutoPrimarySizes(node, measureText);
 
   resolveSizes(node);

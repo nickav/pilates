@@ -1,8 +1,8 @@
 #pragma once
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdio.h>
 
 #define PILATES_PRINT(name) int name(const char *fmt, ...);
 typedef PILATES_PRINT(PrintFunc);
@@ -104,8 +104,9 @@ void asciiRenderNode(Node *node, char *output, char *colorOutput, int width,
       }
     }
 
-    ForEachChild(
-        node, { asciiRenderNode(child, output, colorOutput, width, height); });
+    ForEachChild(node) {
+      asciiRenderNode(child, output, colorOutput, width, height);
+    }
   }
 }
 

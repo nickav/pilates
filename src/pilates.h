@@ -9,6 +9,10 @@
 // We want to calculate the pixel positions (upper left offset) and height/width
 // Padding and margin
 
+#ifndef __cplusplus
+typedef enum { false, true } bool;
+#endif
+
 #ifdef PILATES_DEBUG
 #include <stdio.h>
 
@@ -57,9 +61,9 @@ typedef PILATES_MEASURE_TEXT(MeasureTextFunc);
 #define PILATES_NO_WRAP 0
 #define PILATES_WRAP 1
 
-enum NodeType { DIV, TEXT, NodeType_COUNT };
+typedef enum NodeType { DIV, TEXT, NodeType_COUNT } NodeType;
 
-enum PropType {
+typedef enum PropType {
   FLEX_DIRECTION,
   FLEX_GROW,
   FLEX_WRAP,
@@ -67,9 +71,9 @@ enum PropType {
   ALIGN_ITEMS,
   ALIGN_SELF,
   PropType_COUNT
-};
+} PropType;
 
-struct Node {
+typedef struct Node {
   NodeType type;
   int props[PropType_COUNT];
   int id;
@@ -78,22 +82,22 @@ struct Node {
   float width, height;
 
   // div nodes
-  Node *children;
+  struct Node *children;
   int numChildren;
 
   // text nodes
   char *text;
-};
+} Node;
 
 #define ForEachChild(Parent, Body)                                             \
   for (int i = 0; i < Parent->numChildren; i++) {                              \
-    auto *child = &Parent->children[i];                                        \
+    Node *child = &Parent->children[i];                                        \
     Body                                                                       \
   }
 
-Node textNode(char *text) { return Node{.type = TEXT, .text = text}; }
+Node textNode(char *text) { return (Node){.type = TEXT, .text = text}; }
 
-Node divNode() { return Node{.type = DIV}; }
+Node divNode() { return (Node){.type = DIV}; }
 
 void setNodeSize(Node *node, int width, int height) {
   node->width = width;
@@ -197,15 +201,15 @@ float calcChildSpacing(int value, float size, float parentSize, int n) {
   }
 }
 
-int strlen(char *str) {
-  char *s;
+unsigned long strLength(const char *str) {
+  const char *s;
   for (s = str; *s; s++)
     ;
   return (s - str);
 }
 
-int strpos(char *str, char search, int offset) {
-  for (int i = offset; i < strlen(str); i++) {
+int strPos(char *str, char search, int offset) {
+  for (int i = offset; i < strLength(str); i++) {
     if (str[i] == search) {
       return i;
     }
@@ -217,7 +221,7 @@ int strpos(char *str, char search, int offset) {
 int computeLetterWrapLineHeight(int fontId, MeasureTextFunc *measureText,
                                 char *text, float maxWidth) {
   int lines = 1;
-  int n = strlen(text);
+  int n = strLength(text);
 
   float width, height;
   measureText(fontId, text, n, &width, &height);
@@ -233,9 +237,9 @@ int computerWordWrapLineHeight(int fontId, MeasureTextFunc *measureText,
   int lines = 1;
   float lineWidth = 0;
 
-  int n = strlen(text);
+  int n = strLength(text);
   for (int i = 0; i < n; i++) {
-    int nextSpace = strpos(text, ' ', i);
+    int nextSpace = strPos(text, ' ', i);
 
     if (nextSpace < 0)
       nextSpace = n - 1;
@@ -366,19 +370,19 @@ void resolveSizes(Node *node) {
   ForEachChild(node, { resolveSizes(child); });
 }
 
-void calcTotalSizeAndRows(Node *node, float &totalSize, int &totalRows,
-                          float &rowHeight) {
+void calcTotalSizeAndRows(Node *node, float *totalSize, int *totalRows,
+                          float *rowHeight) {
   int d = getFlexDirection(node);
   bool wrap = getFlexWrap(node);
   float nodeWidth = getSize1(node, d);
 
-  totalSize = 0.f;
-  totalRows = 1;
+  float outSize = 0.f;
+  float outRows = 1;
 
   float accWidth = 0;
   float maxChildHeight = 0;
   ForEachChild(node, {
-    totalSize += getSize1(child, d);
+    outSize += getSize1(child, d);
     maxChildHeight = Max(maxChildHeight, getSize2(child, d));
 
     if (wrap) {
@@ -386,13 +390,15 @@ void calcTotalSizeAndRows(Node *node, float &totalSize, int &totalRows,
       bool overflow = accWidth > nodeWidth;
       if (overflow) {
         accWidth = 0;
-        totalRows++;
+        outRows ++;
       }
     }
   });
 
   float nodeHeight = getSize2(node, d);
-  rowHeight = Max(maxChildHeight, nodeHeight / totalRows);
+  *totalSize = outSize;
+  *totalRows = outRows;
+  *rowHeight = Max(maxChildHeight, nodeHeight / outRows);
 }
 
 void calcPositions(Node *node) {
@@ -402,7 +408,7 @@ void calcPositions(Node *node) {
   float nodeWidth = getSize1(node, d);
   float totalSize, rowHeight;
   int totalRows;
-  calcTotalSizeAndRows(node, totalSize, totalRows, rowHeight);
+  calcTotalSizeAndRows(node, &totalSize, &totalRows, &rowHeight);
 
   float axisOffset =
       calcGroupOffset(justifyContent, totalSize, nodeWidth, node->numChildren);

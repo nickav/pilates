@@ -37,7 +37,7 @@ bool nodeBoundsEqualsRecursive(Node *a, Node *b) {
 Node mkdiv(float x, float y, float width, float height, Node *children,
            int numChildren) {
   static int id = 1;
-  return Node{
+  return (Node){
       .id = id++,
       .x = x,
       .y = y,

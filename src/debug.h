@@ -7,7 +7,7 @@
 #define PILATES_PRINT(name) int name(const char *fmt, ...);
 typedef PILATES_PRINT(PrintFunc);
 
-void printNode(Node *node, bool verbose, PrintFunc *printf, int indent = 0) {
+void printNodeIndent(Node *node, bool verbose, PrintFunc *printf, int indent) {
   static char indent_str[64];
 
   int i;
@@ -37,9 +37,13 @@ void printNode(Node *node, bool verbose, PrintFunc *printf, int indent = 0) {
 
   if (node->numChildren > 0) {
     for (int i = 0; i < node->numChildren; i++) {
-      printNode(&node->children[i], verbose, printf, indent + 2);
+      printNodeIndent(&node->children[i], verbose, printf, indent + 2);
     }
   }
+}
+
+void printNode(Node *node, bool verbose, PrintFunc *printf) {
+  printNodeIndent(node, verbose, printf, 0);
 }
 
 PILATES_MEASURE_TEXT(asciiMeasureText) {

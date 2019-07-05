@@ -218,6 +218,32 @@ Test(multiPass) {
   return true;
 }
 
+Test(growToTextSize) {
+  Node items[] = {mktext("hello")};
+  Node root = mkdivp(0, 0, 0, 0, items);
+
+  Node ec1[] = {mkdiv(0, 0, 5, 1)};
+  Node e = mkdivp(0, 0, 5, 1, ec1);
+
+  layout(&root);
+  AssertNodeEquals(&root, &e);
+
+  return true;
+}
+
+Test(wrapText) {
+  Node items[] = {mktext("hello world")};
+  Node root = mkdivp(0, 0, 5, 0, items);
+
+  Node ec1[] = {mkdiv(0, 0, 5, 2)};
+  Node e = mkdivp(0, 0, 5, 2, ec1);
+
+  layout(&root);
+  AssertNodeEquals(&root, &e);
+
+  return true;
+}
+
 TestFunc *tests[] = {alignmentAndSpacing,
                      threeColumnLayout,
                      parentHeightFromChildren,
@@ -226,6 +252,8 @@ TestFunc *tests[] = {alignmentAndSpacing,
                      flexGrow,
                      flexWrap,
                      multiPass,
+                     growToTextSize,
+                     wrapText,
                      NULL};
 
 int main() {
@@ -234,7 +262,7 @@ int main() {
   int numFailed = totalTests - numPassed;
 
   if (numPassed == totalTests) {
-    printf("\nAll %d test(s) passed! 🧘\n", numPassed);
+    printf("\n%d test(s) passed! 🧘\n", numPassed);
   } else {
     printf("\n%d test(s) failed!\n", numFailed);
   }

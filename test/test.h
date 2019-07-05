@@ -32,7 +32,6 @@ bool nodeBoundsEqualsRecursive(Node *a, Node *b) {
   return true;
 }
 
-
 // test helpers
 Node mkdiv(float x, float y, float width, float height, Node *children,
            int numChildren) {
@@ -45,6 +44,7 @@ Node mkdiv(float x, float y, float width, float height, Node *children,
       .height = height,
       .children = children,
       .numChildren = numChildren,
+      .type = DIV,
   };
 }
 
@@ -54,6 +54,15 @@ Node mkdiv(float x, float y, float width, float height) {
 
 Node mkdiv(float width, float height) {
   return mkdiv(0, 0, width, height, NULL, 0);
+}
+
+Node mktext(char *text) {
+  static int id = 1;
+  return (Node){
+      .id = id++,
+      .text = text,
+      .type = TEXT,
+  };
 }
 
 #define mkdivp(x, y, width, height, children)                                  \
@@ -101,8 +110,8 @@ inline bool AssertNodeBoundsEquals(Node *result, Node *expected,
 
 #define AssertEquals(a, b)                                                     \
   if (a != b) {                                                                \
-    printf("Test '%s' AssertEquals failed on line %d\n",           \
-                       __FUNCTION__, __LINE__);                                \
+    printf("Test '%s' AssertEquals failed on line %d\n", __FUNCTION__,         \
+           __LINE__);                                                          \
     return false;                                                              \
   }
 

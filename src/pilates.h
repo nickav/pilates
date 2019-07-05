@@ -14,6 +14,7 @@ typedef enum { false, true } bool;
 #endif
 
 #ifdef PILATES_DEBUG
+
 #include <stdio.h>
 
 #define Assert(expr)                                                           \
@@ -22,10 +23,10 @@ typedef enum { false, true } bool;
            __LINE__);                                                          \
     *(volatile int *)0 = 0;                                                    \
   }
+
 #else
 
 #define Assert(expr)
-
 #define printf(...)
 
 #endif
@@ -216,19 +217,20 @@ int strPos(char *str, char search, int offset) {
   return -1;
 }
 
+// TODO: fix the way that this handles breaks with newlines
 int computeLetterWrapLineHeight(int fontId, MeasureTextFunc *measureText,
                                 char *text, float maxWidth) {
   float width, height;
   measureText(fontId, text, 0, &width, &height);
 
-  float wrapf = (maxWidth / width);
+  float wrapf = (width / maxWidth);
   int wrapi = wrapf;
 
   return wrapf > wrapi ? wrapi + 1 : wrapi;
 }
 
-int computerWordWrapLineHeight(int fontId, MeasureTextFunc *measureText,
-                               char *text, float maxWidth) {
+int computeWordWrapLineHeight(int fontId, MeasureTextFunc *measureText,
+                              char *text, float maxWidth) {
   int lines = 1;
   float lineWidth = 0;
 
@@ -240,7 +242,7 @@ int computerWordWrapLineHeight(int fontId, MeasureTextFunc *measureText,
       nextSpace = n - 1;
 
     float width, height;
-    measureText(fontId, &text[i], nextSpace - i + 1, &width, &height);
+    measureText(fontId, &text[i], nextSpace - i, &width, &height);
     lineWidth += width;
 
     if (lineWidth > maxWidth) {
@@ -248,7 +250,7 @@ int computerWordWrapLineHeight(int fontId, MeasureTextFunc *measureText,
       lineWidth = width;
     }
 
-    i = nextSpace;
+    i = nextSpace + 1;
   }
 
   return lines;
@@ -355,14 +357,24 @@ void resolveFlexGrow(Node *node, int offset, int n) {
   }
 }
 
-void resolveSizes(Node *node) {
+void resolveSizes(Node *node, MeasureTextFunc *measureText) {
   if (getFlexWrap(node) == PILATES_NO_WRAP) {
     resolveFlexGrow(node, 0, node->numChildren);
   }
 
+  // force text elements to wrap (to get their height)
+  int d = getFlexDirection(node);
+  ForEachChild(node) {
+    if (child->type == TEXT) {
+      int nLines = computeWordWrapLineHeight(0, measureText, child->text,
+                                             getSize1(node, d));
+      setSize2(child, d, nLines * getSize2(child, d));
+    }
+  };
+
   calcSecondarySizes(node);
 
-  ForEachChild(node) resolveSizes(child);
+  ForEachChild(node) resolveSizes(child, measureText);
 }
 
 void calcTotalSizeAndRows(Node *node, float *totalSize, int *totalRows,
@@ -492,12 +504,8 @@ void relativeToAbsolute(Node *node) {
 // layout the nodes (giving relative positions to their parents) based on
 // spacing and wrapping
 void layoutNodes(Node *node, MeasureTextFunc *measureText) {
-
   computeAutoPrimarySizes(node, measureText);
-
-  resolveSizes(node);
-
+  resolveSizes(node, measureText);
   calcPositions(node);
-
   relativeToAbsolute(node);
 }

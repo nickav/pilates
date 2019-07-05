@@ -232,14 +232,27 @@ Test(growToTextSize) {
 }
 
 Test(wrapText) {
-  Node items[] = {mktext("hello world")};
-  Node root = mkdivp(0, 0, 5, 0, items);
+  {
+    Node items[] = {mktext("hello world")};
+    Node root = mkdivp(0, 0, 5, 0, items);
 
-  Node ec1[] = {mkdiv(0, 0, 5, 2)};
-  Node e = mkdivp(0, 0, 5, 2, ec1);
+    Node ec1[] = {mkdiv(0, 0, 5, 2)};
+    Node e = mkdivp(0, 0, 5, 2, ec1);
 
-  layout(&root);
-  AssertNodeEquals(&root, &e);
+    layout(&root);
+    AssertNodeEquals(&root, &e);
+  }
+
+  {
+    Node items[] = {mktext("hi hi hi hello")};
+    Node root = mkdivp(0, 0, 5, 0, items);
+
+    Node ec1[] = {mkdiv(0, 0, 5, 3)};
+    Node e = mkdivp(0, 0, 5, 3, ec1);
+
+    layout(&root);
+    AssertNodeEquals(&root, &e);
+  }
 
   return true;
 }

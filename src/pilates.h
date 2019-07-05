@@ -232,7 +232,7 @@ int computeLetterWrapLineHeight(int fontId, MeasureTextFunc *measureText,
 int computeWordWrapLineHeight(int fontId, MeasureTextFunc *measureText,
                               char *text, float maxWidth) {
   int lines = 1;
-  float lineWidth = 0;
+  int lineStart = 0;
 
   int n = strLength(text);
   for (int i = 0; i < n; i++) {
@@ -241,13 +241,14 @@ int computeWordWrapLineHeight(int fontId, MeasureTextFunc *measureText,
     if (nextSpace < 0)
       nextSpace = n - 1;
 
-    float width, height;
-    measureText(fontId, &text[i], nextSpace - i, &width, &height);
-    lineWidth += width;
+    float lineWidth, height;
+    int charsToMeasure = nextSpace - lineStart + 1;
+    measureText(fontId, &text[lineStart], charsToMeasure, &lineWidth,
+                &height);
 
     if (lineWidth > maxWidth) {
       lines++;
-      lineWidth = width;
+      lineStart = nextSpace + 1;
     }
 
     i = nextSpace + 1;
